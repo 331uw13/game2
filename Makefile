@@ -19,5 +19,5 @@ $(TARGET_NAME): $(OBJS)
 clean:
 	rm $(OBJS) $(TARGET_NAME)
 
-.PHONY: all clean
+.PHONY: all $(TARGET_NAME) clean
 
