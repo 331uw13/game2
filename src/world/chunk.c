@@ -85,17 +85,21 @@ void march
 }
 
 
+
 static
-float get_noise(Vector3 p) {
-    float perlin = stb_perlin_noise3(
-            (p.x / (float)CHUNK_SIZE) * 2,
-            (p.y / (float)CHUNK_SIZE) * 2,
-            (p.z / (float)CHUNK_SIZE) * 2,
+float perlin_noise(Vector3 p, float freq) {
+    return stb_perlin_noise3(
+            ((p.x * freq) / (float)CHUNK_SIZE),
+            ((p.y * freq) / (float)CHUNK_SIZE),
+            ((p.z * freq) / (float)CHUNK_SIZE),
             0,
             0,
             0);
+}
 
-    return perlin;
+static
+float get_noise(Vector3 p) {
+    return perlin_noise(p, 2.0);
 }
 
 void generate_chunk(struct world_chunk* chunk, int chunk_x, int chunk_y, int chunk_z) {
@@ -204,10 +208,10 @@ void generate_chunk(struct world_chunk* chunk, int chunk_x, int chunk_y, int chu
 
     printf("Chunk total vertices: %li / %i\n", total_vertices, chunk->mesh.vertexCount);
 
+    // TODO: Take a look at marching tetrahedra algorithm.
 
     chunk->mesh.vertexCount   = total_vertices;
     chunk->mesh.triangleCount = total_vertices / 3;
-
 
     UploadMesh(&chunk->mesh, true);
 }
@@ -218,7 +222,7 @@ void free_chunk(struct world_chunk* chunk) {
 
 void render_chunk(struct world_chunk* chunk, Material mat) {
 
-    rlDisableBackfaceCulling();
+    //rlDisableBackfaceCulling();
     //rlEnableWireMode();
     Matrix translation = MatrixTranslate(
             chunk->world_pos.x,
@@ -228,25 +232,7 @@ void render_chunk(struct world_chunk* chunk, Material mat) {
     DrawMesh(chunk->mesh, mat, translation);
 
     //rlDisableWireMode();
-    rlEnableBackfaceCulling();
-    /*
-    rlDisableBackfaceCulling();
-    for(uint32_t i = 0; i < chunk->num_triangles; i++) {
-        struct triangle* t = &chunk->triangles[i];
-        //DrawCube(t->a, 0.1, 0.1, 0.1, RED);
-        //DrawCube(t->b, 0.1, 0.1, 0.1, RED);
-        //DrawCube(t->c, 0.1, 0.1, 0.1, RED);
-
-        DrawLine3D(t->a, t->b, (Color){ 255, 80, 30, 255 });
-        DrawLine3D(t->b, t->c, (Color){ 255, 80, 30, 255 });
-        DrawLine3D(t->c, t->a, (Color){ 255, 80, 30, 255 });
-        //DrawPoint3D(t->a, RED);
-        //DrawPoint3D(t->b, BLUE);
-        //DrawPoint3D(t->c, GREEN);
-
-        //DrawTriangle3D(t->a, t->b, t->c, WHITE);
-    }
-    rlEnableBackfaceCulling();
-    */
+    //rlEnableBackfaceCulling();
+   
 }
 

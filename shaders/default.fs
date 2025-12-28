@@ -20,7 +20,7 @@ vec3 ambient = vec3(0.3, 0.1, 0.05);
 
 void main()
 {
-    float d = dot(
+    float d = 1.0 - dot(
             normalize(fragNormal),
             normalize(sun));
     d = clamp(d, 0.0, 1.0);
