@@ -13,12 +13,15 @@ struct world {
 
     struct chunk* chunks;
     size_t        num_chunks;
-
+    int           num_chunks_x;
+    int           num_chunks_y;
 };
 
 
 void load_world(struct world* w, int chunks_width, int chunks_height);
-void free_world(struct world* w);
+void render_world(struct world* w);
 
+void free_world(struct world* w);
+bool get_surface(struct world* w, Vector2 from, Vector2* surface);
 
 #endif

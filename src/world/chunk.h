@@ -9,6 +9,10 @@
 #define CHUNK_SIZE 64
 
 
+#define NORMAL_DOWN(y) (y >  0.001f)
+#define NORMAL_UP(y)   (y < -0.001f)
+#define INF_DISTANCE -9999999999.9f
+
 enum chunk_cell_id {
     S_ID_NONE,
     S_ID_AIR,
@@ -17,11 +21,15 @@ enum chunk_cell_id {
 };
 
 
-struct chunk_cell {
-    enum chunk_cell_id id;
-
+struct segment {
     Vector2 va;
     Vector2 vb;
+    Vector2 normal;
+};
+
+struct chunk_cell {
+    enum chunk_cell_id  id;
+    struct segment      segment;
 };
 
 struct chunk {
@@ -41,7 +49,7 @@ void render_chunk(struct chunk* chunk);
 struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p);
 
 void get_chunk_local_coords(Vector2 p, struct chunk* chunk, int* col, int* row);
-void get_chunk_coords(Vector2 p, struct chunk* chunk, int* col, int* row);
+void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row);
 
 
 #endif

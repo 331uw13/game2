@@ -26,6 +26,7 @@ struct gstate {
     int screen_width;
     int screen_height;
 
+    struct world  world;
     struct player player;
 };
 

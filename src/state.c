@@ -31,7 +31,7 @@ struct gstate* gstate_init() {
     gst->screen_width = GetScreenWidth() / RESOLUTION_DIV;
     gst->screen_height = GetScreenHeight() / RESOLUTION_DIV;
 
-    create_player(&gst->player, (Vector2){ 0.0, 0.0 });
+    create_player(&gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
 
 
     gst->render_target = LoadRenderTexture(gst->screen_width, gst->screen_height);
@@ -49,7 +49,7 @@ struct gstate* gstate_init() {
     init_bloom(gst->screen_width, gst->screen_height);
 
 
-    load_chunk(&test_chunk, 0, 0);
+    load_world(&gst->world, 4, 4);
 
 
     return gst;
@@ -62,7 +62,7 @@ void free_gstate(struct gstate* gst) {
     }
 
     free_player(&gst->player);
-    free_chunk(&test_chunk);
+    free_world(&gst->world);
     free_bloom();
     
     UnloadRenderTexture(gst->render_target);
@@ -86,7 +86,7 @@ void render(struct gstate* gst) {
     DrawCircle(gst->player.pos.x + 16, gst->player.pos.y + 33, 1.0f, ORANGE);
 
     render_player(&gst->player);
-    render_chunk(&test_chunk);
+    render_world(&gst->world);
 }
 
 static
@@ -132,34 +132,53 @@ void gstate_rungame(struct gstate* gst) {
         
        
         render(gst);
-        
+       
+        // FOR TESTING
+        {
+
+            Vector2 player_feet = 
+             (Vector2){ gst->player.pos.x + 16, gst->player.pos.y + 33 };
+
+
+            Vector2 surface;
+            if(get_surface(&gst->world, player_feet, &surface)) {
+                DrawCircle(surface.x, surface.y, 2.0f, BLUE);
+            }
+
+
+
+        }
+        /*
         // FOR TESTING
         {
 
             struct chunk_cell* chunk_cell = get_chunk_cell_at(&test_chunk,
                     (Vector2){ gst->player.pos.x + 16, gst->player.pos.y + 33 });
 
-            switch(chunk_cell->id) {
-                case S_ID_SURFACE:
-                    DrawLine(
-                            chunk_cell->va.x,
-                            chunk_cell->va.y,
-                            chunk_cell->vb.x,
-                            chunk_cell->vb.y,
-                            RED);
-                    printf("S_ID_SURFACE\n");
-                    break;
+            if(chunk_cell) {
+                switch(chunk_cell->id) {
+                    case S_ID_SURFACE:
+                        DrawLine(
+                                chunk_cell->segment.va.x,
+                                chunk_cell->segment.va.y,
+                                chunk_cell->segment.vb.x,
+                                chunk_cell->segment.vb.y,
+                                BLUE);
+                        printf("S_ID_SURFACE\n");
+                        break;
 
-                case S_ID_AIR:
-                    printf("S_ID_AIR\n");
-                    break;
+                    case S_ID_AIR:
+                        printf("S_ID_AIR\n");
+                        break;
 
-                case S_ID_FULL:
-                    printf("S_ID_FULL\n");
-                    break;
+                    case S_ID_FULL:
+                        printf("S_ID_FULL\n");
+                        break;
+                }
             }
-
         }
+        */
+
         EndMode2D();
         EndTextureMode();
 

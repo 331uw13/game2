@@ -39,6 +39,10 @@ static
 void update_movement(struct player* pl, float frametime) {
     float speed = 120;
 
+    if(IsKeyDown(KEY_LEFT_CONTROL)) {
+        speed *= 2;
+    }
+
     Vector2 old_pos = pl->pos;
 
     if(IsKeyDown(KEY_A)) {
