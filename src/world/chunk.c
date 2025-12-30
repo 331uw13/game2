@@ -177,7 +177,8 @@ void render_chunk(struct chunk* chunk) {
         if(s->id != S_ID_SURFACE) { continue; }
         DrawLine(s->segment.va.x, s->segment.va.y,
                  s->segment.vb.x, s->segment.vb.y, 
-                 NORMAL_UP(s->segment.normal.y) ? GREEN : RED);
+                 GRAY);
+                 //NORMAL_UP(s->segment.normal.y) ? GREEN : RED);
 
 
         /*
@@ -195,8 +196,8 @@ void render_chunk(struct chunk* chunk) {
 
 
 void get_chunk_local_coords(Vector2 p, struct chunk* chunk, int* col, int* row) {
-    *row = (int)floor(p.y / chunk->scale);
-    *col = (int)floor(p.x / chunk->scale);
+    *row = (int)floor((p.y - (chunk->row * CHUNK_SIZE * chunk->scale)) / chunk->scale);
+    *col = (int)floor((p.x - (chunk->col * CHUNK_SIZE * chunk->scale)) / chunk->scale);
 }
 
 void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row) {
