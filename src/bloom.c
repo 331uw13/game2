@@ -25,7 +25,7 @@ GLSL_VERSION
 "void main() {"
 "    vec4 black = vec4(0.0, 0.0, 0.0, 1.0);"
 "    vec4 result = texture(texture0, frag_texcoord);"
-"    float light = dot(result.rgb, vec3(0.9, 0.9, 0.9));"
+"    float light = dot(result.rgb, vec3(0.9, 2.0, 0.9));"
 ""
 "    out_color.rgb = mix(black, result, pow(light, 4.0)).rgb*0.5;"
 "    out_color.a = result.a;"

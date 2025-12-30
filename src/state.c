@@ -17,14 +17,19 @@
 #include "bloom.h"
 
 
+#define RESOLUTION_DIV  3 
+
+static struct chunk test_chunk = { 0 };
+
+
 struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
 
     InitWindow(1500, 800, "game2");
     SetTargetFPS(TARGET_FPS);
 
-    gst->screen_width = GetScreenWidth() / 2;
-    gst->screen_height = GetScreenHeight() / 2;
+    gst->screen_width = GetScreenWidth() / RESOLUTION_DIV;
+    gst->screen_height = GetScreenHeight() / RESOLUTION_DIV;
 
     create_player(&gst->player, (Vector2){ 0.0, 0.0 });
 
@@ -43,6 +48,10 @@ struct gstate* gstate_init() {
 
     init_bloom(gst->screen_width, gst->screen_height);
 
+
+    load_chunk(&test_chunk, 0, 0);
+
+
     return gst;
 }
 
@@ -52,9 +61,13 @@ void free_gstate(struct gstate* gst) {
         free_shader(&gst->shaders[i]);
     }
 
-    UnloadRenderTexture(gst->render_target);
+    free_player(&gst->player);
+    free_chunk(&test_chunk);
     free_bloom();
+    
+    UnloadRenderTexture(gst->render_target);
     CloseWindow();
+    
     freeif(gst);
 }
 
@@ -62,13 +75,18 @@ void free_gstate(struct gstate* gst) {
 
 static
 void render(struct gstate* gst) {
-    DrawCircle(0, 0, 10.0f, ORANGE);
-    DrawCircle(10, 10, 5.0f, ORANGE);
-    DrawCircle(-10, 30, 5.0f, ORANGE);
-    DrawCircle(5, 35, 2.0f, ORANGE);
+    /*DrawCircle(0, 0, 10.0f, ORANGE);
+    DrawCircle(20, 10, 5.0f, RED);
+    DrawCircle(-10, 30, 5.0f, BLUE);
+    DrawCircle(8, 35, 8.0f, GREEN);
+    DrawRectangle(200, 0, 10, 10, WHITE);
+    */
 
+    
+    DrawCircle(gst->player.pos.x + 16, gst->player.pos.y + 33, 1.0f, ORANGE);
 
-    DrawRectangle(200, 0, 100, 100, WHITE);
+    render_player(&gst->player);
+    render_chunk(&test_chunk);
 }
 
 static
@@ -95,12 +113,14 @@ void gstate_rungame(struct gstate* gst) {
         const float frametime = GetFrameTime();
 
         // Updating...
+    
 
         update_player(&gst->player, frametime);
 
         gst->player.cam.offset.x = gst->screen_width / 2;
         gst->player.cam.offset.y = gst->screen_height / 2;
-        gst->player.cam.target = gst->player.pos;
+        gst->player.cam.target.x = gst->player.pos.x;
+        gst->player.cam.target.y = gst->player.pos.y;
        
 
 
@@ -109,9 +129,37 @@ void gstate_rungame(struct gstate* gst) {
         BeginTextureMode(gst->render_target);
         ClearBackground(BLACK);
         BeginMode2D(gst->player.cam);
+        
        
         render(gst);
+        
+        // FOR TESTING
+        {
 
+            struct chunk_cell* chunk_cell = get_chunk_cell_at(&test_chunk,
+                    (Vector2){ gst->player.pos.x + 16, gst->player.pos.y + 33 });
+
+            switch(chunk_cell->id) {
+                case S_ID_SURFACE:
+                    DrawLine(
+                            chunk_cell->va.x,
+                            chunk_cell->va.y,
+                            chunk_cell->vb.x,
+                            chunk_cell->vb.y,
+                            RED);
+                    printf("S_ID_SURFACE\n");
+                    break;
+
+                case S_ID_AIR:
+                    printf("S_ID_AIR\n");
+                    break;
+
+                case S_ID_FULL:
+                    printf("S_ID_FULL\n");
+                    break;
+            }
+
+        }
         EndMode2D();
         EndTextureMode();
 
@@ -134,8 +182,8 @@ void gstate_rungame(struct gstate* gst) {
                 gst->bloom_result.texture);
 
         draw_tex(gst->render_target, 
-                gst->screen_width * 2,
-                gst->screen_height * 2);
+                gst->screen_width * RESOLUTION_DIV,
+                gst->screen_height * RESOLUTION_DIV);
 
         EndShaderMode();
         DrawFPS(0,0);

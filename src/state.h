@@ -5,7 +5,7 @@
 #include <raylib.h>
 
 #include "player.h"
-
+#include "world/world.h"
 
 
 enum shader_indices : int {
