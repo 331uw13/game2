@@ -1,4 +1,4 @@
-FLAGS = -O2 -Wall -Wextra
+FLAGS = -ggdb -Wall -Wextra
 CC = gcc
 
 TARGET_NAME = game2o
@@ -6,7 +6,7 @@ TARGET_NAME = game2o
 SRC  = $(shell find ./src -type f -name *.c)
 OBJS = $(SRC:.c=.o)
 
-LIBS = -lraylib -lpthread -lX11 -lGL -lm -lffi
+LIBS = -lraylib -lpthread -lX11 -lGL -lm
 all: $(TARGET_NAME)
 
 

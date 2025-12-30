@@ -371,7 +371,30 @@ void free_shader(Shader* shader) {
     glDeleteProgram(shader->id);
 }
 
-void uniformv3(Shader shader, const char* name, Vector3 v) {
+
+void uniform1f(Shader shader, const char* name, float v) {
+    glUseProgram(shader.id);
+    int loc = glGetUniformLocation(shader.id, name);
+
+    if(loc < 0) {
+        errmsg("Could not find location '%s' for shader '<TODO>'", name);
+    }
+
+    glUniform1f(loc, v); 
+}
+
+void uniform2f(Shader shader, const char* name, Vector2 v) {
+    glUseProgram(shader.id);
+    int loc = glGetUniformLocation(shader.id, name);
+
+    if(loc < 0) {
+        errmsg("Could not find location '%s' for shader '<TODO>'", name);
+    }
+
+    glUniform2f(loc, v.x, v.y);  
+}
+
+void uniform3f(Shader shader, const char* name, Vector3 v) {
     glUseProgram(shader.id);
     int loc = glGetUniformLocation(shader.id, name);
 

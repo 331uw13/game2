@@ -18,7 +18,9 @@ bool load_shader(
 void free_shader(Shader* shader);
 
 
-void uniformv3(Shader shader, const char* name, Vector3 v);
+void uniform1f(Shader shader, const char* name, float   v);
+void uniform2f(Shader shader, const char* name, Vector2 v);
+void uniform3f(Shader shader, const char* name, Vector3 v);
 
 /*
 // TODO: Struct for compute shader.

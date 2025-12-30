@@ -8,15 +8,13 @@
 
 int main() {
     struct gstate* gst = gstate_init();
-    if(gst) {
-        gstate_rungame(gst);
-    }
-    else {
+    if(!gst) {
         return 1;
     }
-    int exit_code = gst->exit_code;
+  
+    gstate_rungame(gst);
     free_gstate(gst);
-    return exit_code;
+    return 0;
 }
 
 
