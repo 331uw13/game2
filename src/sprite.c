@@ -56,7 +56,17 @@ void load_animation(struct sprite* sprite, const char* folder, const char* name)
         char numbuf[8] = { 0 };
         ssize_t numbuf_len = snprintf(numbuf, sizeof(numbuf)-1, "/%i.png", i);
         string_append(&tmp, numbuf, numbuf_len);
-        anim->textures[i] = LoadTexture(tmp.bytes);
+        
+
+        Texture* tex = &anim->textures[i];
+        *tex = LoadTexture(tmp.bytes);
+
+        if(tex->width > sprite->width) {
+            sprite->width = tex->width;
+        }
+        if(tex->height > sprite->height) {
+            sprite->height = tex->height;
+        }
     }
 
 
@@ -74,7 +84,8 @@ void load_sprite(struct sprite* sprite, const char* folder) {
     sprite->flags = 0;
     sprite->curr_anim = NULL;
     sprite->animations = NULL;
-
+    sprite->width = 0;
+    sprite->height = 0;
     while((ent = readdir(dir))) {
         if(ent->d_name[0] == '.') {
             continue;
@@ -136,6 +147,10 @@ void render_sprite(struct sprite* sprite, Vector2 pos) {
 
     pos.x = -pos.x;
     pos.y = -pos.y;
+
+
+    pos.x += sprite->width / 2;
+    pos.y += sprite->height / 2;
 
     DrawTexturePro(*tex,
             (Rectangle){

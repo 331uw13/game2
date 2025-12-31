@@ -17,10 +17,7 @@
 #include "bloom.h"
 
 
-#define RESOLUTION_DIV  3 
-
-static struct chunk test_chunk = { 0 };
-
+#define RESOLUTION_DIV  2
 
 struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
@@ -30,8 +27,6 @@ struct gstate* gstate_init() {
 
     gst->screen_width = GetScreenWidth() / RESOLUTION_DIV;
     gst->screen_height = GetScreenHeight() / RESOLUTION_DIV;
-
-    create_player(&gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
 
 
     gst->render_target = LoadRenderTexture(gst->screen_width, gst->screen_height);
@@ -50,8 +45,9 @@ struct gstate* gstate_init() {
 
 
     load_world(&gst->world, 4, 4);
-
-
+    create_player(&gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
+ 
+    gst->player.world = &gst->world;
     return gst;
 }
 
@@ -82,8 +78,6 @@ void render(struct gstate* gst) {
     DrawRectangle(200, 0, 10, 10, WHITE);
     */
 
-    
-    DrawCircle(gst->player.pos.x + 16, gst->player.pos.y + 33, 1.0f, ORANGE);
 
     render_player(&gst->player);
     render_world(&gst->world);
@@ -112,6 +106,12 @@ void gstate_rungame(struct gstate* gst) {
     while(!WindowShouldClose()) {
         const float frametime = GetFrameTime();
 
+        // Rendering...
+
+        BeginTextureMode(gst->render_target);
+        ClearBackground(BLACK);
+        BeginMode2D(gst->player.cam);
+        
         // Updating...
     
 
@@ -124,15 +124,10 @@ void gstate_rungame(struct gstate* gst) {
        
 
 
-        // Rendering...
-
-        BeginTextureMode(gst->render_target);
-        ClearBackground(BLACK);
-        BeginMode2D(gst->player.cam);
-        
        
         render(gst);
-       
+     
+        /*
         // FOR TESTING
         {
 
@@ -140,14 +135,26 @@ void gstate_rungame(struct gstate* gst) {
              (Vector2){ gst->player.pos.x + 16, gst->player.pos.y + 33 };
 
 
-            Vector2 surface;
-            if(get_surface(&gst->world, player_feet, &surface)) {
-                DrawCircle(surface.x, surface.y, 2.0f, BLUE);
+
+            static Vector2 dir = NV_DOWN;
+            if(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+                dir.x += GetMouseDelta().x;
+                dir.y += GetMouseDelta().y;
             }
 
 
+            Vector2 surface;
+            if(get_surface(&gst->world, player_feet, dir, &surface)) {
+                DrawCircle(surface.x, surface.y, 2.0f, BLUE);
+            
+                if(IsKeyDown(KEY_LEFT_ALT)) {
+                    gst->player.pos.y = surface.y - 34;
+                }
+            }
+
 
         }
+        */
         /*
         // FOR TESTING
         {
@@ -206,6 +213,12 @@ void gstate_rungame(struct gstate* gst) {
 
         EndShaderMode();
         DrawFPS(0,0);
+        DrawText(TextFormat("X: %i, Y: %i | onground: %s",
+                    (int)gst->player.pos.x,
+                    (int)gst->player.pos.y,
+                    gst->player.onground ? "yes" : "no"
+                    ),
+                0, 20, 20, GREEN);
         EndDrawing();
     }
 }

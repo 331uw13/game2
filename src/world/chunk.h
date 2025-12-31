@@ -11,6 +11,9 @@
 
 #define NORMAL_DOWN(y) (y >  0.001f)
 #define NORMAL_UP(y)   (y < -0.001f)
+#define NORMAL_LEFT(x) (x < -0.001f)
+#define NORMAL_RIGHT(x)(x >  0.001f)
+
 #define INF_DISTANCE -9999999999.9f
 
 enum chunk_cell_id {
@@ -20,15 +23,17 @@ enum chunk_cell_id {
     S_ID_SURFACE
 };
 
-
 struct segment {
     Vector2 va;
     Vector2 vb;
     Vector2 normal;
 };
 
+
 struct chunk_cell {
-    enum chunk_cell_id  id;
+    int world_x;
+    int world_y;
+    enum chunk_cell_id    id;
     struct segment      segment;
 };
 
@@ -43,6 +48,19 @@ struct chunk {
 };
 
 
+enum cell_slope {
+    C_SLOPE_NONE,
+    C_SLOPE_FLAT,
+    C_SLOPE_RIGHT,
+    C_SLOPE_LEFT,
+    C_SLOPE_VERTICAL,
+    C_SLOPE_CEILING,
+    C_SLOPE_CEILING_LEFT,
+    C_SLOPE_CEILING_RIGHT,
+    C_SLOPE_FULL_CELL
+};
+
+
 void load_chunk(struct chunk* chunk, int col, int row);
 void free_chunk(struct chunk* chunk);
 void render_chunk(struct chunk* chunk);
@@ -50,6 +68,8 @@ struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p);
 
 void get_chunk_local_coords(Vector2 p, struct chunk* chunk, int* col, int* row);
 void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row);
+
+enum cell_slope get_cell_slope(struct chunk_cell* cell);
 
 
 #endif

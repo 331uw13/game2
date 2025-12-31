@@ -27,7 +27,7 @@ float perlin_noise(Vector2 p, float freq) {
 
 static
 float get_noise(Vector2 p) {
-    float n = perlin_noise(p, 0.8);
+    float n = perlin_noise(p, 0.6);
 
     return n;
 }
@@ -85,8 +85,7 @@ void load_chunk(struct chunk* chunk, int col, int row) {
 
     const float isolevel = 0.1f;
 
-    chunk->scale = 10;
-
+    chunk->scale = 14;
 
     for(int y = 0; y < CHUNK_SIZE; y++) {
         for(int x = 0; x < CHUNK_SIZE; x++) {
@@ -147,7 +146,9 @@ void load_chunk(struct chunk* chunk, int col, int row) {
                 }
                 
                 struct chunk_cell* cell = &chunk->cells[y * CHUNK_SIZE + x];
-                
+            
+                cell->world_x = p.x * chunk->scale;
+                cell->world_y = p.y * chunk->scale;
                 cell->segment.va = Vector2Scale(edge_points[cases[case_index][i]], chunk->scale);
                 cell->segment.vb = Vector2Scale(edge_points[cases[case_index][i+1]], chunk->scale);
                 cell->segment.normal = cases_normals[case_index][k];
@@ -174,23 +175,30 @@ void render_chunk(struct chunk* chunk) {
 
     for(uint32_t i = 0; i < CHUNK_SIZE*CHUNK_SIZE; i++) {
         struct chunk_cell* s = &chunk->cells[i];
+        
         if(s->id != S_ID_SURFACE) { continue; }
         DrawLine(s->segment.va.x, s->segment.va.y,
                  s->segment.vb.x, s->segment.vb.y, 
                  GRAY);
-                 //NORMAL_UP(s->segment.normal.y) ? GREEN : RED);
-
-
+    
         /*
-        Vector2 c = Vector2Lerp(s->segment.va, s->segment.vb, 0.5);
+        DrawRectangle(
+                    s->world_x,
+                    s->world_y,
+                    chunk->scale, chunk->scale,
+                    (Color){ 20, 100, 10, 50 }
+                    );*/
+        //NORMAL_UP(s->segment.normal.y) ? GREEN : RED);
+
+
+        // Visualize normals.
+        /*Vector2 c = Vector2Lerp(s->segment.va, s->segment.vb, 0.5);
         DrawLine(
                 c.x,
                 c.y,
                 c.x + s->segment.normal.x * 8,
                 c.y + s->segment.normal.y * 8,
-                RED);
-                */
-
+                RED);*/
     }
 }
 
@@ -225,41 +233,42 @@ struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p) {
     return &chunk->cells[ local_y * CHUNK_SIZE + local_x ];
 }
 
-/*
-static
-float distance_to_surface_cell(struct chunk_cell* cell, Vector2 p) {
-    Vector2 left;
-    Vector2 right;
 
-    if(cell->segment.va.x < cell->segment.vb.x) {
-        left = cell->segment.va;
-        right = cell->segment.vb;
-    }
-    else {
-        left = cell->segment.vb;
-        right = cell->segment.va;
+enum cell_slope get_cell_slope(struct chunk_cell* cell) {
+    if(!cell) {
+        return C_SLOPE_NONE;
     }
 
-    if(FloatEquals(right.x, left.x)) {
-        return INF_DISTANCE;
+    Vector2* n = &cell->segment.normal;
+
+    if(cell->id == S_ID_FULL) {
+        return C_SLOPE_FULL_CELL;
     }
 
-    float d = (p.x - left.x) / (right.x - left.x);
+    if(NORMAL_UP(n->y) && !NORMAL_LEFT(n->x) && !NORMAL_RIGHT(n->x)) {
+        return C_SLOPE_FLAT;
+    }
+    if(NORMAL_DOWN(n->y) && !NORMAL_LEFT(n->x) && !NORMAL_RIGHT(n->x)) {
+        return C_SLOPE_CEILING;
+    }
+    if(NORMAL_UP(n->y) && NORMAL_LEFT(n->x)) {
+        return C_SLOPE_LEFT;
+    } 
+    if(NORMAL_UP(n->y) && NORMAL_RIGHT(n->x)) {
+        return C_SLOPE_RIGHT;
+    }
+    if(NORMAL_DOWN(n->y) && NORMAL_LEFT(n->x)) {
+        return C_SLOPE_CEILING_LEFT;
+    } 
+    if(NORMAL_DOWN(n->y) && NORMAL_RIGHT(n->x)) {
+        return C_SLOPE_CEILING_RIGHT;
+    }
+    if(!NORMAL_DOWN(n->y) && !NORMAL_UP(n->y)) {
+        return C_SLOPE_VERTICAL;
+    }
 
-    float left_dist = Vector2Distance(p, left);
-    float right_dist = Vector2Distance(p, right);
-    return Lerp(left_dist, right_dist, d);
+    return C_SLOPE_NONE;
 }
-*/
 
-/*
-bool get_surface(struct chunk* chunk, Vector2 from, Vector2* surface) {
-    bool found = false;
-
-
-
-    return found;
-}
-*/
 
 

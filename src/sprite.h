@@ -26,6 +26,9 @@ struct sprite {
     struct anim_map* animations;
     struct animation* curr_anim;
     int flags;
+
+    int width;
+    int height;
 };
 
 #define SPRITE_FLIP_VERTICAL (1 << 0)
