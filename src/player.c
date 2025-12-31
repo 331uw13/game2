@@ -156,7 +156,8 @@ void update_position(struct player* pl, float frametime) {
         pl->pos.y = pl->want_pos.y;
     }
     else 
-    if(want_move_down) {
+    if(want_move_down) {        
+        pl->pos.y = surface.y - pl->sprite.height / 2;
         pl->vel.y = 0;
     }
 
@@ -169,9 +170,11 @@ void update_position(struct player* pl, float frametime) {
         center.y = pl->want_pos.y;
         if(can_move_left(pl->world, center, radius)) {
             pl->pos.x = pl->want_pos.x;
+            /*
             if(!allow_move_down) {
                 pl->pos.y = surface.y - pl->sprite.height / 2;
             }
+            */
         }
     }
 
@@ -183,9 +186,11 @@ void update_position(struct player* pl, float frametime) {
         center.y = pl->want_pos.y;
         if(can_move_right(pl->world, center, radius)) {
             pl->pos.x = pl->want_pos.x;
+            /*
             if(!allow_move_down) {
                 pl->pos.y = surface.y - pl->sprite.height / 2;
             }
+            */
         }
     }
 
