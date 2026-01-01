@@ -213,10 +213,11 @@ void gstate_rungame(struct gstate* gst) {
 
         EndShaderMode();
         DrawFPS(0,0);
-        DrawText(TextFormat("X: %i, Y: %i | onground: %s",
+        DrawText(TextFormat("X: %i, Y: %i | onground: %s | jumps: %i",
                     (int)gst->player.pos.x,
                     (int)gst->player.pos.y,
-                    gst->player.onground ? "yes" : "no"
+                    gst->player.onground ? "yes" : "no",
+                    gst->player.jump_counter
                     ),
                 0, 20, 20, GREEN);
         EndDrawing();

@@ -17,6 +17,8 @@ void create_player(struct player* pl, Vector2 spawn_pos) {
     pl->want_pos = pl->pos;
     pl->moving = false;
     pl->world = NULL;
+    pl->jump_counter = 0;
+    pl->onground = false;
 
     load_sprite(&pl->sprite, "./sprites/player");
     sprite_set_anim(&pl->sprite, "idle");
@@ -39,7 +41,7 @@ void started_moving(struct player* pl) {
 
 static
 void get_movement_input(struct player* pl, float frametime) {
-    float speed = 300;
+    float speed = 500;
     pl->want_pos = pl->pos;
 
     if(IsKeyDown(KEY_LEFT_CONTROL)) {
@@ -60,13 +62,6 @@ void get_movement_input(struct player* pl, float frametime) {
     if(IsKeyDown(KEY_D)) {
         pl->vel.x += frametime * speed;
         pl->sprite.flags &= ~SPRITE_FLIP_HORIZONTAL;
-    }
-
-    if(IsKeyDown(KEY_S)) {
-        pl->vel.y += frametime * speed;
-    }
-    if(IsKeyDown(KEY_W)) {
-        pl->vel.y -= frametime * speed;
     }
     
     if(IsKeyPressed(KEY_SPACE)) {
@@ -90,8 +85,17 @@ void get_movement_input(struct player* pl, float frametime) {
 
 void player_jump(struct player* pl) {
     pl->vel.y = -200.0;
+    pl->jump_counter++;
+    pl->jumped = true;
 }
 
+
+
+
+static
+void set_player_onground(struct player* pl, Vector2 surface) {
+    pl->pos.y = surface.y - pl->sprite.height / 2;
+}
 
 
 static
@@ -116,7 +120,7 @@ void update_position(struct player* pl, float frametime) {
     pl->want_pos.y += pl->vel.y * frametime;
 
     
-    float friction = pow(1.0f - 0.007f, 500.0f * frametime);
+    float friction = pow(1.0f - 0.00885f, 500.0f * frametime);
     pl->vel.x *= friction;
     
     pl->vel.y += 10.0f * (frametime * 60.0f);
@@ -148,19 +152,9 @@ void update_position(struct player* pl, float frametime) {
     bool want_move_up    = (pl->want_pos.y < pl->pos.y);
 
 
-    if(want_move_up && allow_move_up) {
-        pl->pos.y = pl->want_pos.y;
-    }
 
-    if(want_move_down && allow_move_down) {
-        pl->pos.y = pl->want_pos.y;
-    }
-    else 
-    if(want_move_down) {        
-        pl->pos.y = surface.y - pl->sprite.height / 2;
-        pl->vel.y = 0;
-    }
 
+    // Handle Left movement.
 
     if(want_move_left && allow_move_left) {
         pl->pos.x = pl->want_pos.x;
@@ -170,13 +164,11 @@ void update_position(struct player* pl, float frametime) {
         center.y = pl->want_pos.y;
         if(can_move_left(pl->world, center, radius)) {
             pl->pos.x = pl->want_pos.x;
-            /*
-            if(!allow_move_down) {
-                pl->pos.y = surface.y - pl->sprite.height / 2;
-            }
-            */
         }
     }
+
+
+    // Handle Right movement.
 
     if(want_move_right && allow_move_right) {
         pl->pos.x = pl->want_pos.x;
@@ -186,106 +178,33 @@ void update_position(struct player* pl, float frametime) {
         center.y = pl->want_pos.y;
         if(can_move_right(pl->world, center, radius)) {
             pl->pos.x = pl->want_pos.x;
-            /*
-            if(!allow_move_down) {
-                pl->pos.y = surface.y - pl->sprite.height / 2;
-            }
-            */
-        }
-    }
-
-
-
-    /*
-    if(pl->want_pos.y < pl->pos.y && allow_move_up) {
-        pl->pos.y = pl->want_pos.y;
-    }
-
-    if(pl->want_pos.y > pl->pos.y && allow_move_down) {
-        pl->pos.y = pl->want_pos.y;
-    }
-
-    if(pl->want_pos.x < pl->pos.x && allow_move_left) {
-        pl->pos.x = pl->want_pos.x;
-    }
-
-    if(pl->want_pos.x > pl->pos.x && allow_move_right) {
-        pl->pos.x = pl->want_pos.x;
-    }
-    */
-
-
-
-
-
-        /*
-    Rectangle player_box = (Rectangle) {
-        .x = pl->pos.x - pl->sprite.width / 4 + 2,
-        .y = pl->pos.y - pl->sprite.height / 4 + 8,
-        .width = 16,
-        .height = 24
-    };
-
-       
-    Vector2 surface;
-    if(get_surface(pl->world, (Vector2) {
-                player_box.x + player_box.width / 2, 
-                player_box.y + player_box.height / 2 
-                }, 
-                NV_DOWN, &surface, NULL)) {
-        pl->onground = (surface.y <= player_box.y + player_box.height + 1);
-    }
-    else {
-        // Player cant be on ground
-        // because the surface was not found.
-        pl->onground = false; 
-    }
-
-
-    // Moving left.
-    if(pl->want_pos.x < pl->pos.x) {
-        if(can_move_left(pl->world, player_box)) {
-            pl->pos.x = pl->want_pos.x;
         }
     }
     
-    // Moving right.
-    if(pl->want_pos.x > pl->pos.x) {
-        if(can_move_right(pl->world, player_box)) {
-            pl->pos.x = pl->want_pos.x;
-        }
-    }
  
-    if(pl->onground && pl->vel.y >= 0.0f) {
-        pl->want_pos.y = surface.y - pl->sprite.height / 2 - 1;
-        pl->vel.y = 0;
-    }
-    else {
-        pl->vel.y += 0.3f;
-        pl->vel.y = CLAMP(pl->vel.y, -50.0f, 50.0f);
-        pl->want_pos.y += pl->vel.y * (frametime * 8.0f);
-    }
-
-    if(!pl->onground && pl->want_pos.y < pl->pos.y) {
-        Vector2 ceiling;
-        if(can_move_up(pl->world, player_box)) {
-            pl->pos.y = pl->want_pos.y;
-        }
-        else {
-            pl->vel.y = 1.0f;
-        }
-    }
-    else {
-        // Moving down so surface detection handled that.
+    if(want_move_up && allow_move_up) {
         pl->pos.y = pl->want_pos.y;
     }
 
-
-    if(IsKeyDown(KEY_LEFT_ALT)) {
-        pl->pos = pl->want_pos;
+    if(want_move_down && allow_move_down) {
+        pl->pos.y = pl->want_pos.y;
+    }
+    else 
+    if(want_move_down) {        
+        set_player_onground(pl, surface);
         pl->vel.y = 0;
     }
-    */
+
+
+    pl->onground = (pl->pos.y + pl->sprite.height/2 > surface.y-1);
+    if(pl->onground && !pl->jumped) {
+        pl->jump_counter = 0;
+    }
+    
+    if(!pl->onground) {
+        pl->jumped = false;
+    }
+
 }
 
 

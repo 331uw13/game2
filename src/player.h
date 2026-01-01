@@ -22,6 +22,8 @@ struct player {
     struct sprite sprite;
     bool moving;
     bool onground;
+    int jump_counter;
+    bool jumped;
 
     struct world* world;
 };
