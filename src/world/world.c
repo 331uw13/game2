@@ -302,11 +302,11 @@ bool can_move_right(struct world* w, Rectangle rect) {
 }*/
 
 
-bool can_move_up(struct world* w, Vector2 center, float radius) {
+bool can_move_up(struct world* w, Vector2 center, float radius, Vector2* hit_normal) {
     bool can_move_up = true;
     Vector2 ceiling;
-    if(get_surface(w, center, NV_UP, &ceiling, NULL)) {
-        DrawCircle(ceiling.x, ceiling.y, 3.0f, ORANGE);
+    if(get_surface(w, center, NV_UP, &ceiling, hit_normal)) {
+        //DrawCircle(ceiling.x, ceiling.y, 3.0f, ORANGE);
         if(Vector2Distance(center, ceiling) < radius) {
             can_move_up = false;
         }
@@ -314,11 +314,11 @@ bool can_move_up(struct world* w, Vector2 center, float radius) {
     return can_move_up;
 }
 
-bool can_move_right(struct world* w, Vector2 center, float radius) {
+bool can_move_right(struct world* w, Vector2 center, float radius, Vector2* hit_normal) {
     bool can_move_right = true;
     Vector2 right;
-    if(get_surface(w, center, NV_RIGHT, &right, NULL)) {
-        DrawCircle(right.x, right.y, 3.0f, ORANGE);
+    if(get_surface(w, center, NV_RIGHT, &right, hit_normal)) {
+        //DrawCircle(right.x, right.y, 3.0f, ORANGE);
         if(Vector2Distance(center, right) < radius) {
             can_move_right = false;
         }
@@ -326,11 +326,11 @@ bool can_move_right(struct world* w, Vector2 center, float radius) {
     return can_move_right;
 }
  
-bool can_move_left(struct world* w, Vector2 center, float radius) {
+bool can_move_left(struct world* w, Vector2 center, float radius, Vector2* hit_normal) {
     bool can_move_left = true;
     Vector2 left;
-    if(get_surface(w, center, NV_LEFT, &left, NULL)) {
-        DrawCircle(left.x, left.y, 3.0f, ORANGE);
+    if(get_surface(w, center, NV_LEFT, &left, hit_normal)) {
+        //DrawCircle(left.x, left.y, 3.0f, ORANGE);
         if(Vector2Distance(center, left) < radius) {
             can_move_left = false;
         }
@@ -338,11 +338,11 @@ bool can_move_left(struct world* w, Vector2 center, float radius) {
     return can_move_left;
 }
    
-bool can_move_down(struct world* w, Vector2 center, float radius) {
+bool can_move_down(struct world* w, Vector2 center, float radius, Vector2* hit_normal) {
     bool can_move_down = true;
     Vector2 bottom;
-    if(get_surface(w, center, NV_DOWN, &bottom, NULL)) {
-        DrawCircle(bottom.x, bottom.y, 3.0f, ORANGE);
+    if(get_surface(w, center, NV_DOWN, &bottom, hit_normal)) {
+        //DrawCircle(bottom.x, bottom.y, 3.0f, ORANGE);
         if(Vector2Distance(center, bottom) < radius) {
             can_move_down = false;
         }

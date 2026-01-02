@@ -4,6 +4,7 @@
 #include <dirent.h>
 #include <stdio.h>
 #include <rlgl.h>
+#include <time.h>
 
 #include "thirdparty/glad.h"
 
@@ -15,14 +16,31 @@
 #include "common.h"
 #include "shader_util.h"
 #include "bloom.h"
-
+#include "perlin_noise.h"
 
 #define RESOLUTION_DIV  2
+
+
+/*
+static struct psystem*  test_psys;
+static struct ps_emitter*  test_emitter_A;
+static struct ps_emitter*  test_emitter_B;
+*/
+
+static
+void load_item_textures(struct gstate* gst) {
+    
+    gst->item_textures[ITEM_WAND] = LoadTexture("./textures/wand.png");
+    gst->item_textures[ITEM_FIREBEND] = LoadTexture("./textures/firebend.png");
+
+
+}
+
 
 struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
 
-    InitWindow(1500, 800, "game2");
+    InitWindow(1200, 800, "game2");
     SetTargetFPS(TARGET_FPS);
 
     gst->screen_width = GetScreenWidth() / RESOLUTION_DIV;
@@ -41,13 +59,38 @@ struct gstate* gstate_init() {
             &gst->shaders[SHADER_POSTPROCESS]);
 
 
+    load_item_textures(gst);
     init_bloom(gst->screen_width, gst->screen_height);
 
 
     load_world(&gst->world, 4, 4);
-    create_player(&gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
- 
-    gst->player.world = &gst->world;
+    create_player(&gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
+    //create_player(&gst->player, (Vector2){ 0, 0 });
+
+
+    srand48(time(NULL));
+
+    // For testing
+
+    /*{
+
+        test_psys = new_psystem("test_psystem");
+        test_emitter_A = add_particle_emitter(test_psys, 300, (Rectangle){
+                    gst->player.pos.x + 30,
+                    gst->player.pos.y - 10,
+                    10,
+                    10
+                });
+
+      
+        add_particle_mod(test_psys, PMOD_fire_particle);
+
+
+    }*/
+
+    init_perlin_noise();
+
+
     return gst;
 }
 
@@ -56,7 +99,10 @@ void free_gstate(struct gstate* gst) {
     for(int i = 0; i < SHADERS_COUNT; i++) {
         free_shader(&gst->shaders[i]);
     }
-
+    for(int i = 0; i < ITEM_TYPES_COUNT; i++) {
+        UnloadTexture(gst->item_textures[i]);
+    }
+ 
     free_player(&gst->player);
     free_world(&gst->world);
     free_bloom();
@@ -79,7 +125,7 @@ void render(struct gstate* gst) {
     */
 
 
-    render_player(&gst->player);
+    render_player(gst, &gst->player);
     render_world(&gst->world);
 }
 
@@ -104,24 +150,30 @@ void draw_tex(RenderTexture t, int w, int h) {
 
 void gstate_rungame(struct gstate* gst) {
     while(!WindowShouldClose()) {
-        const float frametime = GetFrameTime();
-
-        // Rendering...
+        gst->frametime = GetFrameTime();
 
         BeginTextureMode(gst->render_target);
         ClearBackground(BLACK);
         BeginMode2D(gst->player.cam);
         
-        // Updating...
     
 
-        update_player(&gst->player, frametime);
+        /*
+        if(IsKeyDown(KEY_T)) {
+            add_particles(gst, test_psys, 1);
+        }
+        */
+        //update_psystem(gst, test_psys);
+
+        //render_psystem(test_psys);
+
+
+        update_player(gst, &gst->player);
 
         gst->player.cam.offset.x = gst->screen_width / 2;
         gst->player.cam.offset.y = gst->screen_height / 2;
         gst->player.cam.target.x = gst->player.pos.x;
         gst->player.cam.target.y = gst->player.pos.y;
-       
 
 
        

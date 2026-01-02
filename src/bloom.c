@@ -5,8 +5,8 @@
 
 
 
-#define NUM_SAMPLES  8
-#define SCALE_FACTOR 0.8f
+#define NUM_SAMPLES  6
+#define SCALE_FACTOR 0.6f
 
 #define GLSL_VERSION "#version 330\n"
 

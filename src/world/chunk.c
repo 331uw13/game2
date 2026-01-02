@@ -179,18 +179,9 @@ void render_chunk(struct chunk* chunk) {
         if(s->id != S_ID_SURFACE) { continue; }
         DrawLine(s->segment.va.x, s->segment.va.y,
                  s->segment.vb.x, s->segment.vb.y, 
-                 GRAY);
-    
-        /*
-        DrawRectangle(
-                    s->world_x,
-                    s->world_y,
-                    chunk->scale, chunk->scale,
-                    (Color){ 20, 100, 10, 50 }
-                    );*/
-        //NORMAL_UP(s->segment.normal.y) ? GREEN : RED);
-
-
+                 (Color){ 255, 90, 20, 255 });
+   
+        
         // Visualize normals.
         /*Vector2 c = Vector2Lerp(s->segment.va, s->segment.vb, 0.5);
         DrawLine(

@@ -1,12 +1,13 @@
 #include <raymath.h>
 #include <stdio.h>
 
+#include "state.h"
 #include "player.h"
 #include "common.h"
 #include "world/chunk.h"
 
 
-void create_player(struct player* pl, Vector2 spawn_pos) {
+void create_player(struct world* world, struct player* pl, Vector2 spawn_pos) {
     
     pl->cam = (Camera2D) { 0 };
     pl->cam.target = (Vector2){ spawn_pos.x, spawn_pos.y };
@@ -18,14 +19,27 @@ void create_player(struct player* pl, Vector2 spawn_pos) {
     pl->moving = false;
     pl->world = NULL;
     pl->jump_counter = 0;
+    pl->attack_timer = 0.0f;
+    pl->attack_delay = 0.01f;
     pl->onground = false;
+    pl->world = world;
 
     load_sprite(&pl->sprite, "./sprites/player");
     sprite_set_anim(&pl->sprite, "idle");
+
+    pl->spell_psys = new_psystem(world, "player_spell_psystem");
+    pl->spell_emitter = add_particle_emitter(pl->spell_psys, 1000, (Rectangle){ 0, 0, 20, 20 });
+
+
+
+
+    add_particle_mod(pl->spell_psys, PMOD_fire_particle);
+    add_particle_mod(pl->spell_psys, PMOD_physical_particle);
 }
 
 void free_player(struct player* pl) {
     free_sprite(&pl->sprite);
+    free_psystem(pl->spell_psys);
 }
 
 
@@ -93,8 +107,10 @@ void player_jump(struct player* pl) {
 
 
 static
-void set_player_onground(struct player* pl, Vector2 surface) {
-    pl->pos.y = surface.y - pl->sprite.height / 2;
+void set_player_onground(struct player* pl) {
+    if(pl->got_surface) {
+        pl->pos.y = pl->surface.y - pl->sprite.height / 2;
+    }
 }
 
 
@@ -122,7 +138,8 @@ void update_position(struct player* pl, float frametime) {
     
     float friction = pow(1.0f - 0.00885f, 500.0f * frametime);
     pl->vel.x *= friction;
-    
+   
+    // Gravity.
     pl->vel.y += 10.0f * (frametime * 60.0f);
 
 
@@ -133,18 +150,20 @@ void update_position(struct player* pl, float frametime) {
     };
 
 
-    DrawCircleLines(center.x, center.y, radius, RED);
+    //DrawCircleLines(center.x, center.y, radius, RED);
 
 
-    Vector2 surface;
-    bool got_surface = get_surface(pl->world, center, NV_DOWN, &surface, NULL);
+    pl->got_surface = get_surface(pl->world, center, NV_DOWN, &pl->surface, NULL);
+
 
     // Do final checking.
 
-    bool allow_move_up     = can_move_up(pl->world, center, radius);
-    bool allow_move_down   = can_move_down(pl->world, center, radius);
-    bool allow_move_left   = can_move_left(pl->world, center, radius);
-    bool allow_move_right  = can_move_right(pl->world, center, radius);
+
+
+    bool allow_move_up     = can_move_up(pl->world, center, radius, NULL);
+    bool allow_move_down   = can_move_down(pl->world, center, radius, NULL);
+    bool allow_move_left   = can_move_left(pl->world, center, radius, NULL);
+    bool allow_move_right  = can_move_right(pl->world, center, radius, NULL);
 
     bool want_move_left  = (pl->want_pos.x < pl->pos.x);
     bool want_move_right = (pl->want_pos.x > pl->pos.x);
@@ -162,7 +181,7 @@ void update_position(struct player* pl, float frametime) {
     else
     if(want_move_left && allow_move_up) {
         center.y = pl->want_pos.y;
-        if(can_move_left(pl->world, center, radius)) {
+        if(can_move_left(pl->world, center, radius, NULL)) {
             pl->pos.x = pl->want_pos.x;
         }
     }
@@ -176,7 +195,7 @@ void update_position(struct player* pl, float frametime) {
     else
     if(want_move_right && allow_move_up) {
         center.y = pl->want_pos.y;
-        if(can_move_right(pl->world, center, radius)) {
+        if(can_move_right(pl->world, center, radius, NULL)) {
             pl->pos.x = pl->want_pos.x;
         }
     }
@@ -191,12 +210,18 @@ void update_position(struct player* pl, float frametime) {
     }
     else 
     if(want_move_down) {        
-        set_player_onground(pl, surface);
+        set_player_onground(pl);
         pl->vel.y = 0;
     }
 
 
-    pl->onground = (pl->pos.y + pl->sprite.height/2 > surface.y-1);
+    if(pl->got_surface) {
+        pl->onground = (pl->pos.y + pl->sprite.height/2 > pl->surface.y-1);
+    }
+    else {
+        pl->onground = false;
+    }
+
     if(pl->onground && !pl->jumped) {
         pl->jump_counter = 0;
     }
@@ -208,20 +233,80 @@ void update_position(struct player* pl, float frametime) {
 }
 
 
-
-void update_player(struct player* pl, float frametime) {
-    get_movement_input(pl, frametime);
-    update_position(pl, frametime);
-    sprite_update_anim(&pl->sprite, frametime);
+static
+void update_attacking(struct gstate* gst, struct player* pl) {
 
 
+    if(IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !pl->casting_spell) {
+        pl->attack_timer = 0.0f;
+        pl->casting_spell = true;
+
+        Vector2 mouse = GetMousePosition();
+        Vector2 screen = (Vector2) {
+            GetScreenWidth(),
+            GetScreenHeight()
+        };
+
+        pl->attack_side = (mouse.x < screen.x / 2) ? -1 : 1;
+  
+        pl->spell_direction = Vector2Normalize((Vector2) {
+            mouse.x - screen.x / 2,
+            mouse.y - screen.y / 2
+        });
+
+        pl->spell_emitter->cfg.initial_velocity 
+            = Vector2Scale(pl->spell_direction, 7.0f);
+        
+        pl->spell_emitter->cfg.spawn_rect.x = pl->pos.x + pl->spell_direction.x * 30;
+        pl->spell_emitter->cfg.spawn_rect.y = pl->pos.y + pl->spell_direction.y * 30;
+        pl->spell_emitter->cfg.spawn_rect.width = 8;
+        pl->spell_emitter->cfg.spawn_rect.height = 8;
+
+        add_particles(gst, pl->spell_psys, 10);
+    }
 
 
+    if(pl->casting_spell) {
+        pl->attack_timer += gst->frametime;
+        if(pl->attack_timer >= pl->attack_delay) {
+            pl->casting_spell = false;
+        }
+    }
 }
 
 
-void render_player(struct player* pl) {
+void update_player(struct gstate* gst, struct player* pl) {
+    get_movement_input(pl, gst->frametime);
+    update_position(pl, gst->frametime);
+    update_attacking(gst, pl);
+    sprite_update_anim(&pl->sprite, gst->frametime);
+
+    update_psystem(gst, pl->spell_psys);
+}
+
+
+void render_player(struct gstate* gst, struct player* pl) {
     render_sprite(&pl->sprite, pl->pos);
-}
+    render_psystem(pl->spell_psys);
 
+    
+    if(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+
+        Vector2 wand_pos = pl->pos;
+        Vector2 wand_offset = (Vector2){ 3, 13 };
+
+        /*
+        float angle = Lerp(120.0f, 40.0f, pl->attack_timer); 
+        angle *= pl->attack_side;
+        */
+
+        float angle = atan2(pl->spell_direction.y, pl->spell_direction.x) * RAD2DEG;
+
+        draw_texture(gst->item_textures[ITEM_WAND],
+                wand_pos,
+                wand_offset,
+                angle + 90.0,
+                1.0f, WHITE);
+    }
+}
 

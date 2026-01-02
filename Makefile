@@ -1,4 +1,4 @@
-FLAGS = -ggdb -Wall -Wextra
+FLAGS = -O3 -Wall -Wextra
 CC = gcc
 
 TARGET_NAME = game2o

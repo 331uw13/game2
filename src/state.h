@@ -6,6 +6,7 @@
 
 #include "player.h"
 #include "world/world.h"
+#include "psystem.h"
 
 
 enum shader_indices : int {
@@ -25,9 +26,12 @@ struct gstate {
 
     int screen_width;
     int screen_height;
+    float frametime;
 
     struct world  world;
     struct player player;
+
+    Texture item_textures [ITEM_TYPES_COUNT];
 };
 
 

@@ -1,0 +1,192 @@
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
+#include "psystem.h"
+#include "errmsg.h"
+#include "memory.h"
+
+#include <stdio.h>
+
+struct psystem* new_psystem(struct world* world, const char* name) {
+    struct psystem* ps = malloc(sizeof *ps);
+    ps->num_emitters = 0;
+    ps->name = strdup(name);
+    ps->world = world;
+    return ps;
+}
+
+
+struct ps_emitter* add_particle_emitter(struct psystem* ps, uint32_t max_particles, Rectangle spawn_rect) {
+
+    if(ps->num_emitters+1 >= PSYSTEM_EMITTERS_MAX) {
+        errmsg("Particle system '%s' has maximum amount of emitters already.\n", ps->name);
+        return NULL;
+    }
+
+    struct ps_emitter* emitter = &ps->emitters[ps->num_emitters];
+    ps->num_emitters++;
+
+
+    emitter->max_particles = max_particles;
+    emitter->particles = calloc(max_particles, sizeof *emitter->particles);
+    emitter->cfg.spawn_rect = spawn_rect;
+    emitter->cfg.initial_velocity = (Vector2){ 0, 0 };
+    emitter->next_particle_index = 0;
+    emitter->num_particles = 0;
+    emitter->psystem = ps;
+
+    for(uint32_t i = 0; i < emitter->max_particles; i++) {
+        struct particle* part = &emitter->particles[i];
+        part->next = NULL;
+        part->prev = NULL;
+        part->alive = false;
+        part->index = i;
+    }
+
+    return emitter;
+}
+
+
+static
+int find_dead_index(struct ps_emitter* emitter) {
+    struct particle* part = emitter->particles + emitter->next_particle_index;
+
+    if(!part->alive) {
+        return emitter->next_particle_index;
+    }
+
+
+    for(uint32_t i = 0; i < emitter->max_particles; i++) {
+        part = &emitter->particles[i];
+        if(!part->alive) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+
+void remove_particle(struct ps_emitter* emitter, uint32_t index) {
+    struct particle* part = &emitter->particles[index];
+
+    part->alive = false;
+    emitter->next_particle_index = index;
+    if(emitter->num_particles > 0) {
+        emitter->num_particles--;
+    }
+}
+
+static
+void add_one_particle(struct gstate* gst, struct psystem* ps, struct ps_emitter* emitter) {
+    /*if(emitter->num_particles + 1 >= emitter->max_particles) {
+        return;
+    }*/
+
+    int part_index = find_dead_index(emitter);
+    if(part_index < 0) {
+        return;
+    }
+
+
+    struct particle* part = &emitter->particles[part_index];
+    if(part->alive) {
+        return;
+    }
+    part->alive = true;
+
+    float rx = drand48() * emitter->cfg.spawn_rect.width;
+    float ry = drand48() * emitter->cfg.spawn_rect.height;
+    part->pos.x = rx + emitter->cfg.spawn_rect.x - emitter->cfg.spawn_rect.width / 2;
+    part->pos.y = ry + emitter->cfg.spawn_rect.y - emitter->cfg.spawn_rect.height / 2;
+    part->vel = emitter->cfg.initial_velocity;
+    part->acc = (Vector2) { 0, 0 };
+    part->lifetime = 1.0f;
+
+    part->color = (Color){ 0, 255, 0, 255 };
+
+    for(uint32_t mi = 0; mi < ps->num_particle_mods; mi++) {
+        ps->particle_mods[mi](PMODCTX_PARTICLE_SPAWN, gst, emitter, part);
+    }
+
+    if(emitter->num_particles+1 < emitter->max_particles) {
+        emitter->num_particles++;
+    }
+}
+
+
+void add_particles(struct gstate* gst, struct psystem* ps, uint32_t n) {
+    for(uint32_t i = 0; i < ps->num_emitters; i++) {
+        for(uint32_t c = 0; c < n; c++) {
+            add_one_particle(gst, ps, &ps->emitters[i]);
+        }
+    }
+}
+
+void add_particle_mod(struct psystem* ps, particle_mod_fn* mod) {
+    if(ps->num_particle_mods+1 >= PSYSTEM_PARTICLE_MODS_MAX) {
+        errmsg("Particle system '%s' has maximum particle mods already.", ps->name);
+        return;
+    }
+
+    ps->particle_mods[ps->num_particle_mods] = mod;
+    ps->num_particle_mods++;
+}
+
+void update_psystem(struct gstate* gst, struct psystem* ps) {
+    for(uint32_t mi = 0; mi < ps->num_particle_mods; mi++) {
+        for(uint32_t ei = 0; ei < ps->num_emitters; ei++) {
+            struct ps_emitter* emitter = &ps->emitters[ei];
+
+            for(uint32_t pi = 0; pi < emitter->max_particles; pi++) {
+                struct particle* part = &emitter->particles[pi];
+
+                if(!part->alive) {
+                    continue;
+                }
+
+                part->lifetime -= gst->frametime;
+                if(part->lifetime < 0.0f) {
+                    ps->particle_mods[mi](PMODCTX_PARTICLE_DEATH, gst, emitter, part);
+                    remove_particle(emitter, part->index);
+                    continue;
+                }
+
+                ps->particle_mods[mi](PMODCTX_FRAME_UPDATE, gst, emitter, part);
+            }
+        }
+    }
+}
+
+void render_psystem(struct psystem* ps) {
+    for(uint32_t i = 0; i < ps->num_emitters; i++) {
+        struct ps_emitter* emitter = &ps->emitters[i];
+
+
+        for(uint32_t i = 0; i < emitter->max_particles; i++) {
+            struct particle* part = &emitter->particles[i];
+            if(!part->alive) {
+                continue;
+            }
+
+            DrawRectangle(part->pos.x, part->pos.y, 3.0, 3.0, part->color);
+            //DrawCircle(part->pos.x, part->pos.y, 2.0, part->color);
+        }
+
+
+        /*
+        DrawCircle(emitter->cfg.spawn_rect.x, emitter->cfg.spawn_rect.y, 1.0, BLUE);
+        DrawRectangleLines(
+                emitter->cfg.spawn_rect.x - emitter->cfg.spawn_rect.width / 2,
+                emitter->cfg.spawn_rect.y - emitter->cfg.spawn_rect.height / 2,
+                emitter->cfg.spawn_rect.width,
+                emitter->cfg.spawn_rect.height,
+                (Color){ 30, 200, 200, 80 }
+                );*/
+    }
+}
+
+void free_psystem(struct psystem* ps) {
+    freeif(ps->name);
+    freeif(ps);
+}

@@ -29,10 +29,10 @@ struct chunk_cell* get_world_chunk_cell_v(struct world* w, Vector2 p);
 struct chunk_cell* raycast_world
     (struct world* w, Vector2 start, Vector2 direction, int max_len);
 
-bool can_move_up(struct world* w, Vector2 center, float radius);
-bool can_move_down(struct world* w, Vector2 center, float radius);
-bool can_move_left(struct world* w, Vector2 center, float radius);
-bool can_move_right(struct world* w, Vector2 center, float radius);
+bool can_move_up(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
+bool can_move_down(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
+bool can_move_left(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
+bool can_move_right(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
 /*
 bool can_move_up    (struct world* w, Rectangle rect);
 bool can_move_down  (struct world* w, Rectangle rect);

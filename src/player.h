@@ -6,7 +6,8 @@
 
 #include "sprite.h"
 #include "world/world.h"
-
+#include "psystem.h"
+#include "inventory.h"
 
 
 struct player {
@@ -18,20 +19,37 @@ struct player {
     Vector2 feet_pos;
     Vector2 head_pos;
     Vector2 body_pos;
-    
+    Vector2 surface;
+    bool    got_surface;
+
     struct sprite sprite;
     bool moving;
     bool onground;
-    int jump_counter;
+    int  jump_counter;
     bool jumped;
+    
+    float attack_timer;
+    float attack_delay;
+    bool  casting_spell;
+    Vector2 spell_direction;
+    
+    int   attack_side; // -1 is to left, +1 is to right.
+
+    // int mana;
+    // int health;
+
+    struct psystem* spell_psys;
+    struct ps_emitter* spell_emitter;
 
     struct world* world;
 };
 
 
-void create_player(struct player* pl, Vector2 spawn_pos);
-void update_player(struct player* pl, float frametime);
-void render_player(struct player* pl);
+struct gstate;
+
+void create_player(struct world* world, struct player* pl, Vector2 spawn_pos);
+void update_player(struct gstate* gst, struct player* pl);
+void render_player(struct gstate* gst, struct player* pl);
 void player_jump(struct player* pl);
 void free_player(struct player* pl);
 
