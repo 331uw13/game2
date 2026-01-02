@@ -18,6 +18,7 @@ struct particle {
     Vector2 acc;
     float   lifetime;
     Color   color;
+    float   scale;
 
     struct particle* prev;
     struct particle* next;
@@ -29,6 +30,7 @@ struct particle {
 struct ps_emitter_config {
     Rectangle spawn_rect;
     Vector2   initial_velocity;
+    float     initial_scale;
 };
 
 struct ps_emitter {

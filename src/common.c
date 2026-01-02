@@ -16,8 +16,8 @@ void draw_texture(Texture tex, Vector2 pos, Vector2 center_offset, float rotatio
             (Rectangle) {
                 pos.x,
                 pos.y,
-                tex.width,
-                tex.height
+                tex.width * scale,
+                tex.height * scale
             },
             (Vector2) {
                 tex.width / 2 + center_offset.x,

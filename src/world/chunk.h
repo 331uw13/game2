@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <raylib.h>
 
+#include "../item.h"
 
 #define CHUNK_SIZE 64
 
@@ -15,6 +16,12 @@
 #define NORMAL_RIGHT(x)(x >  0.001f)
 
 #define INF_DISTANCE -9999999999.9f
+
+
+// TODO: Items should never get discarded if they cant spawn!
+#define CHUNK_ITEMS_MAX 64
+
+
 
 enum chunk_cell_id {
     S_ID_NONE,
@@ -42,13 +49,16 @@ struct chunk {
     struct chunk_cell* cells;
     uint32_t           num_cells;
 
+    struct item  items [CHUNK_ITEMS_MAX];
+    uint32_t     num_items;
+
     int col;
     int row;
     float scale;
 };
 
 
-enum cell_slope {
+/*enum cell_slope {
     C_SLOPE_NONE,
     C_SLOPE_FLAT,
     C_SLOPE_RIGHT,
@@ -58,18 +68,19 @@ enum cell_slope {
     C_SLOPE_CEILING_LEFT,
     C_SLOPE_CEILING_RIGHT,
     C_SLOPE_FULL_CELL
-};
+};*/
 
+struct gstate;
 
 void load_chunk(struct chunk* chunk, int col, int row);
 void free_chunk(struct chunk* chunk);
-void render_chunk(struct chunk* chunk);
+void render_chunk(struct gstate* gst, struct chunk* chunk);
 struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p);
 
 void get_chunk_local_coords(Vector2 p, struct chunk* chunk, int* col, int* row);
 void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row);
 
-enum cell_slope get_cell_slope(struct chunk_cell* cell);
+//enum cell_slope get_cell_slope(struct chunk_cell* cell);
 
 
 #endif

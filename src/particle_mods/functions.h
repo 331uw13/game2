@@ -7,7 +7,9 @@
 #include "../state.h"
 
 
+void PMOD_default_particle    (PARTICLE_MOD_FUNC_ARGS);
 void PMOD_fire_particle       (PARTICLE_MOD_FUNC_ARGS);
+void PMOD_mirror_particle     (PARTICLE_MOD_FUNC_ARGS);
 void PMOD_physical_particle   (PARTICLE_MOD_FUNC_ARGS);
 
 

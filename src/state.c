@@ -18,7 +18,7 @@
 #include "bloom.h"
 #include "perlin_noise.h"
 
-#define RESOLUTION_DIV  2
+#define RESOLUTION_DIV  2.0
 
 
 /*
@@ -32,6 +32,54 @@ void load_item_textures(struct gstate* gst) {
     
     gst->item_textures[ITEM_WAND] = LoadTexture("./textures/wand.png");
     gst->item_textures[ITEM_FIREBEND] = LoadTexture("./textures/firebend.png");
+    gst->item_textures[ITEM_PARTICLE_GROWTH] = LoadTexture("./textures/particle_growth.png");
+    gst->item_textures[ITEM_MIRROR_PARTICLE] = LoadTexture("./textures/mirror_particle.png");
+
+    gst->item_descs[ITEM_WAND] = strdup("Many centuries old staff.");
+    gst->item_descs[ITEM_FIREBEND] = strdup("Firebend spell modifier.");
+    gst->item_descs[ITEM_PARTICLE_GROWTH] = strdup("Particle growth spell modifier.");
+    gst->item_descs[ITEM_MIRROR_PARTICLE] = strdup("Mirror particle spell modifier.");
+
+    gst->item_rarities[ITEM_WAND] = MYTHICAL_ITEM;
+    
+    gst->item_rarities[ITEM_PARTICLE_GROWTH] = COMMON_ITEM;
+    gst->item_rarities[ITEM_FIREBEND] = RARE_ITEM;
+    gst->item_rarities[ITEM_MIRROR_PARTICLE] = RARE_ITEM;
+
+}
+
+const char* item_rarity_to_str(enum item_rarity rarity) {
+    switch(rarity) {
+        case COMMON_ITEM: return "Common";
+        case RARE_ITEM: return "Rare";
+        case EPIC_ITEM: return "Epic";
+        case MYTHICAL_ITEM: return "Mythical";
+    }
+    return "Unknown";
+}
+
+static
+void spawn_starting_spells(struct gstate* gst, Vector2 pos) {
+   
+    pos.y += 10;
+    
+    spawn_item(gst->player.world, pos, ITEM_FIREBEND);
+    pos.x += 40;
+
+    spawn_item(gst->player.world, pos, ITEM_PARTICLE_GROWTH);
+    pos.x += 40;
+
+    spawn_item(gst->player.world, pos, ITEM_MIRROR_PARTICLE);
+    pos.x += 40;
+
+    spawn_item(gst->player.world, pos, ITEM_FIREBEND);
+    pos.x += 40;
+
+    spawn_item(gst->player.world, pos, ITEM_PARTICLE_GROWTH);
+    pos.x += 40;
+
+    spawn_item(gst->player.world, pos, ITEM_MIRROR_PARTICLE);
+    pos.x += 40;
 
 
 }
@@ -41,7 +89,20 @@ struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
 
     InitWindow(1200, 800, "game2");
+    //ToggleBorderlessWindowed();
+  
+    int monitor = GetCurrentMonitor();
+    int mon_width = GetMonitorWidth(monitor);
+    int mon_height = GetMonitorHeight(monitor);
+
+    Vector2 monitor_pos = GetMonitorPosition(monitor);
+    SetWindowPosition(monitor_pos.x, monitor_pos.y);
+    SetWindowSize(mon_width, mon_height);
+
     SetTargetFPS(TARGET_FPS);
+
+    gst->font = LoadFont("./Rainbow100.ttf");
+    SetTextureFilter(gst->font.texture, RL_TEXTURE_FILTER_NEAREST);
 
     gst->screen_width = GetScreenWidth() / RESOLUTION_DIV;
     gst->screen_height = GetScreenHeight() / RESOLUTION_DIV;
@@ -49,7 +110,6 @@ struct gstate* gstate_init() {
 
     gst->render_target = LoadRenderTexture(gst->screen_width, gst->screen_height);
     gst->bloom_result  = LoadRenderTexture(gst->screen_width, gst->screen_height);
-
 
     gst->shaders[SHADER_NONE] = LoadShader(0, 0);
     load_shader(
@@ -64,31 +124,22 @@ struct gstate* gstate_init() {
 
 
     load_world(&gst->world, 4, 4);
-    create_player(&gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
-    //create_player(&gst->player, (Vector2){ 0, 0 });
+    create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
+    //create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
+
 
 
     srand48(time(NULL));
 
-    // For testing
-
-    /*{
-
-        test_psys = new_psystem("test_psystem");
-        test_emitter_A = add_particle_emitter(test_psys, 300, (Rectangle){
-                    gst->player.pos.x + 30,
-                    gst->player.pos.y - 10,
-                    10,
-                    10
-                });
-
-      
-        add_particle_mod(test_psys, PMOD_fire_particle);
-
-
-    }*/
 
     init_perlin_noise();
+            
+
+
+    // Spawn first spell options.
+    // TODO: Add more and balance these better.
+
+    spawn_starting_spells(gst, gst->player.pos);
 
 
     return gst;
@@ -101,12 +152,14 @@ void free_gstate(struct gstate* gst) {
     }
     for(int i = 0; i < ITEM_TYPES_COUNT; i++) {
         UnloadTexture(gst->item_textures[i]);
+        freeif(gst->item_descs[i]);
     }
  
     free_player(&gst->player);
     free_world(&gst->world);
     free_bloom();
-    
+   
+    UnloadFont(gst->font);
     UnloadRenderTexture(gst->render_target);
     CloseWindow();
     
@@ -117,16 +170,8 @@ void free_gstate(struct gstate* gst) {
 
 static
 void render(struct gstate* gst) {
-    /*DrawCircle(0, 0, 10.0f, ORANGE);
-    DrawCircle(20, 10, 5.0f, RED);
-    DrawCircle(-10, 30, 5.0f, BLUE);
-    DrawCircle(8, 35, 8.0f, GREEN);
-    DrawRectangle(200, 0, 10, 10, WHITE);
-    */
-
-
     render_player(gst, &gst->player);
-    render_world(&gst->world);
+    render_world(gst, &gst->world);
 }
 
 static
@@ -155,8 +200,8 @@ void gstate_rungame(struct gstate* gst) {
         BeginTextureMode(gst->render_target);
         ClearBackground(BLACK);
         BeginMode2D(gst->player.cam);
-        
-    
+       
+
 
         /*
         if(IsKeyDown(KEY_T)) {
@@ -170,6 +215,12 @@ void gstate_rungame(struct gstate* gst) {
 
         update_player(gst, &gst->player);
 
+        gst->world_mouse_pos = get_world_coords(gst, GetMousePosition());
+        /*gst->world_mouse_pos.x = mouse.x / RESOLUTION_DIV - gst->screen_width / 2;
+        gst->world_mouse_pos.y = mouse.y / RESOLUTION_DIV - gst->screen_height / 2;
+        gst->world_mouse_pos.x += gst->player.pos.x;
+        gst->world_mouse_pos.y += gst->player.pos.y;
+        */
         gst->player.cam.offset.x = gst->screen_width / 2;
         gst->player.cam.offset.y = gst->screen_height / 2;
         gst->player.cam.target.x = gst->player.pos.x;
@@ -263,15 +314,18 @@ void gstate_rungame(struct gstate* gst) {
                 gst->screen_width * RESOLUTION_DIV,
                 gst->screen_height * RESOLUTION_DIV);
 
+    
         EndShaderMode();
-        DrawFPS(0,0);
+        DrawFPS(5, GetScreenHeight()-25);
         DrawText(TextFormat("X: %i, Y: %i | onground: %s | jumps: %i",
                     (int)gst->player.pos.x,
                     (int)gst->player.pos.y,
                     gst->player.onground ? "yes" : "no",
                     gst->player.jump_counter
                     ),
-                0, 20, 20, GREEN);
+                120,
+                GetScreenHeight()-25,
+                20, GREEN);
         EndDrawing();
     }
 }
@@ -291,3 +345,19 @@ void free_ssbo(uint32_t ssbo) {
     glDeleteBuffers(1, &ssbo);
 }
 
+void draw_text(struct gstate* gst, const char* text, Vector2 pos, Color color) {
+    DrawTextEx(gst->font, text, pos, 10, 1.0f, color);
+}
+
+
+Vector2 get_world_coords(struct gstate* gst, Vector2 screen_pos) {
+
+    screen_pos.x /= RESOLUTION_DIV;
+    screen_pos.y /= RESOLUTION_DIV;
+    screen_pos.x -= gst->screen_width / 2;
+    screen_pos.y -= gst->screen_height / 2;
+    screen_pos.x += gst->player.pos.x;
+    screen_pos.y += gst->player.pos.y;
+
+    return screen_pos;
+}

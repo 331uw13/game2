@@ -136,7 +136,7 @@ void sprite_update_anim(struct sprite* sprite, float frametime) {
     }
 }
 
-void render_sprite(struct sprite* sprite, Vector2 pos) {
+void render_sprite(struct sprite* sprite, Vector2 pos, Color tint) {
     if(sprite->curr_anim == NULL) {
         return;
     }
@@ -165,6 +165,6 @@ void render_sprite(struct sprite* sprite, Vector2 pos) {
             },
             pos,
             rotation,
-            WHITE);
+            tint);
 }
 

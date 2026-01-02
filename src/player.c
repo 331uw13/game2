@@ -7,7 +7,7 @@
 #include "world/chunk.h"
 
 
-void create_player(struct world* world, struct player* pl, Vector2 spawn_pos) {
+void create_player(struct gstate* gst, struct world* world, struct player* pl, Vector2 spawn_pos) {
     
     pl->cam = (Camera2D) { 0 };
     pl->cam.target = (Vector2){ spawn_pos.x, spawn_pos.y };
@@ -20,9 +20,12 @@ void create_player(struct world* world, struct player* pl, Vector2 spawn_pos) {
     pl->world = NULL;
     pl->jump_counter = 0;
     pl->attack_timer = 0.0f;
-    pl->attack_delay = 0.01f;
+    pl->attack_delay = 0.05f;
     pl->onground = false;
+    pl->spell_force = 0.0f;
     pl->world = world;
+    pl->using_inventory = false;
+    pl->pickedup_item = NULL;
 
     load_sprite(&pl->sprite, "./sprites/player");
     sprite_set_anim(&pl->sprite, "idle");
@@ -30,16 +33,21 @@ void create_player(struct world* world, struct player* pl, Vector2 spawn_pos) {
     pl->spell_psys = new_psystem(world, "player_spell_psystem");
     pl->spell_emitter = add_particle_emitter(pl->spell_psys, 1000, (Rectangle){ 0, 0, 20, 20 });
 
+    pl->inventory = new_inventory(6, 1);
+    pl->inventory->pos = (Vector2){ 10,  10 };
 
 
 
-    add_particle_mod(pl->spell_psys, PMOD_fire_particle);
+    //add_particle_mod(pl->spell_psys, PMOD_fire_particle);
+    
+    //add_particle_mod(pl->spell_psys, PMOD_default_particle);
     add_particle_mod(pl->spell_psys, PMOD_physical_particle);
 }
 
 void free_player(struct player* pl) {
     free_sprite(&pl->sprite);
     free_psystem(pl->spell_psys);
+    free_inventory(pl->inventory);
 }
 
 
@@ -236,8 +244,12 @@ void update_position(struct player* pl, float frametime) {
 static
 void update_attacking(struct gstate* gst, struct player* pl) {
 
+    if(pl->spell_psys->num_particle_mods == 1) {
+        return; // Only "physical_particle" mod is enabled
+                // Nothing will happen.
+    }
 
-    if(IsMouseButtonDown(MOUSE_LEFT_BUTTON) && !pl->casting_spell) {
+    if(pl->attack_button_down && !pl->casting_spell && !pl->using_inventory) {
         pl->attack_timer = 0.0f;
         pl->casting_spell = true;
 
@@ -262,6 +274,10 @@ void update_attacking(struct gstate* gst, struct player* pl) {
         pl->spell_emitter->cfg.spawn_rect.width = 8;
         pl->spell_emitter->cfg.spawn_rect.height = 8;
 
+
+        pl->vel.x -= pl->spell_direction.x * pl->spell_force;
+        pl->vel.y -= pl->spell_direction.y * pl->spell_force;
+
         add_particles(gst, pl->spell_psys, 10);
     }
 
@@ -275,37 +291,128 @@ void update_attacking(struct gstate* gst, struct player* pl) {
 }
 
 
+static
+void player_added_item(struct gstate* gst, struct player* pl, enum item_type item_type) {
+
+    switch(item_type) {
+        case ITEM_FIREBEND:
+            add_particle_mod(pl->spell_psys, PMOD_fire_particle);
+            pl->spell_force += 1.5f;
+            break;
+    
+        case ITEM_MIRROR_PARTICLE:
+            add_particle_mod(pl->spell_psys, PMOD_mirror_particle);
+            break;
+    
+
+        case ITEM_PARTICLE_GROWTH:
+            pl->spell_emitter->cfg.initial_scale += 2.0f;
+            pl->spell_force += 6.0f;
+            break;
+    }
+
+}
+
+
+static
+void update_inventory_control(struct gstate* gst, struct player* pl) {
+    int inv_column;
+    int inv_row;
+    
+    pl->using_inventory = 
+        get_mouse_on_inventory(gst, pl->inventory, &inv_column, &inv_row);
+
+    if(!pl->using_inventory && pl->attack_button_pressed) {
+        pl->pickedup_item = NULL;
+    }
+    else
+    if(pl->using_inventory && pl->attack_button_pressed) {    
+        enum item_type* storage_slot = get_inventory_slot(pl->inventory, inv_column, inv_row);
+    
+        if(!storage_slot) {
+            return;
+        }
+
+        if(pl->pickedup_item != NULL) {
+            if(storage_slot) {
+                if(*storage_slot == ITEM_NONE) {
+                    player_added_item(gst, pl, pl->pickedup_item->type);
+                    *storage_slot = pl->pickedup_item->type;
+                }
+                
+                pl->pickedup_item->type = ITEM_NONE;
+                pl->pickedup_item = NULL;
+            }
+        }
+        else {
+            // Nothing was selected drop item.
+            spawn_item(pl->world, pl->pos, *storage_slot);
+            *storage_slot = ITEM_NONE;
+        }
+    }
+
+
+}
+
 void update_player(struct gstate* gst, struct player* pl) {
+    pl->attack_button_pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
+    pl->attack_button_down    = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
+
+    
+    update_inventory_control(gst, pl);
     get_movement_input(pl, gst->frametime);
+
     update_position(pl, gst->frametime);
     update_attacking(gst, pl);
     sprite_update_anim(&pl->sprite, gst->frametime);
 
     update_psystem(gst, pl->spell_psys);
+    
+
+
+
+
+
+
 }
 
 
-void render_player(struct gstate* gst, struct player* pl) {
-    render_sprite(&pl->sprite, pl->pos);
-    render_psystem(pl->spell_psys);
+static
+void render_pickedup_item(struct gstate* gst, struct player* pl) {
+    if(pl->pickedup_item == NULL) {
+        return;
+    }
 
+    draw_texture(
+            gst->item_textures[pl->pickedup_item->type],
+            gst->world_mouse_pos,
+            (Vector2){ 0, 0 },
+            0.0f,
+            1.0f,
+            WHITE
+            );
+
+}
+
+void render_player(struct gstate* gst, struct player* pl) {
+
+    render_inventory(gst, pl->inventory);
     
-    if(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+    render_sprite(&pl->sprite, pl->pos, (Color){ 200, 150, 130, 255 });
+    render_psystem(pl->spell_psys);
+    render_pickedup_item(gst, pl);
+
+    if(pl->attack_button_down && !pl->using_inventory && pl->spell_psys->num_particle_mods > 1) {
 
         Vector2 wand_pos = pl->pos;
-        Vector2 wand_offset = (Vector2){ 3, 13 };
-
-        /*
-        float angle = Lerp(120.0f, 40.0f, pl->attack_timer); 
-        angle *= pl->attack_side;
-        */
+        Vector2 wand_offset = (Vector2){ 6, 13 };
 
         float angle = atan2(pl->spell_direction.y, pl->spell_direction.x) * RAD2DEG;
 
         draw_texture(gst->item_textures[ITEM_WAND],
                 wand_pos,
                 wand_offset,
-                angle + 90.0,
+                angle + 90.0 + 15.0f,
                 1.0f, WHITE);
     }
 }

@@ -29,11 +29,13 @@ struct ps_emitter* add_particle_emitter(struct psystem* ps, uint32_t max_particl
 
     emitter->max_particles = max_particles;
     emitter->particles = calloc(max_particles, sizeof *emitter->particles);
-    emitter->cfg.spawn_rect = spawn_rect;
-    emitter->cfg.initial_velocity = (Vector2){ 0, 0 };
     emitter->next_particle_index = 0;
     emitter->num_particles = 0;
     emitter->psystem = ps;
+    
+    emitter->cfg.spawn_rect = spawn_rect;
+    emitter->cfg.initial_velocity = (Vector2){ 0, 0 };
+    emitter->cfg.initial_scale = 2.35f;
 
     for(uint32_t i = 0; i < emitter->max_particles; i++) {
         struct particle* part = &emitter->particles[i];
@@ -79,10 +81,7 @@ void remove_particle(struct ps_emitter* emitter, uint32_t index) {
 
 static
 void add_one_particle(struct gstate* gst, struct psystem* ps, struct ps_emitter* emitter) {
-    /*if(emitter->num_particles + 1 >= emitter->max_particles) {
-        return;
-    }*/
-
+    
     int part_index = find_dead_index(emitter);
     if(part_index < 0) {
         return;
@@ -102,8 +101,8 @@ void add_one_particle(struct gstate* gst, struct psystem* ps, struct ps_emitter*
     part->vel = emitter->cfg.initial_velocity;
     part->acc = (Vector2) { 0, 0 };
     part->lifetime = 1.0f;
-
-    part->color = (Color){ 0, 255, 0, 255 };
+    part->scale = emitter->cfg.initial_scale;
+    part->color = (Color){ 10, 10, 10, 255 };
 
     for(uint32_t mi = 0; mi < ps->num_particle_mods; mi++) {
         ps->particle_mods[mi](PMODCTX_PARTICLE_SPAWN, gst, emitter, part);
@@ -158,6 +157,8 @@ void update_psystem(struct gstate* gst, struct psystem* ps) {
     }
 }
 
+
+
 void render_psystem(struct psystem* ps) {
     for(uint32_t i = 0; i < ps->num_emitters; i++) {
         struct ps_emitter* emitter = &ps->emitters[i];
@@ -169,7 +170,8 @@ void render_psystem(struct psystem* ps) {
                 continue;
             }
 
-            DrawRectangle(part->pos.x, part->pos.y, 3.0, 3.0, part->color);
+
+            DrawRectangle(part->pos.x, part->pos.y, part->scale, part->scale, part->color);
             //DrawCircle(part->pos.x, part->pos.y, 2.0, part->color);
         }
 

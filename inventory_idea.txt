@@ -1,0 +1,11 @@
+
+
+When player's mouse is hovered on item
+render item info.
+
+When <E> is pressed, item enters into "temporary inventory"
+temporary inventory is at mouse position
+and then if the inventory has empty spaces make that inventory slot blink
+and occupied ones show purple blink and replace icon
+
+

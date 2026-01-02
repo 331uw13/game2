@@ -17,8 +17,10 @@ struct world {
 };
 
 
+struct gstate;
+
 void load_world(struct world* w, int chunks_width, int chunks_height);
-void render_world(struct world* w);
+void render_world(struct gstate* gst, struct world* w);
 
 void free_world(struct world* w);
 bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surface, Vector2* normal);
@@ -29,15 +31,12 @@ struct chunk_cell* get_world_chunk_cell_v(struct world* w, Vector2 p);
 struct chunk_cell* raycast_world
     (struct world* w, Vector2 start, Vector2 direction, int max_len);
 
+
 bool can_move_up(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
 bool can_move_down(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
 bool can_move_left(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
 bool can_move_right(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
-/*
-bool can_move_up    (struct world* w, Rectangle rect);
-bool can_move_down  (struct world* w, Rectangle rect);
-bool can_move_left  (struct world* w, Rectangle rect);
-bool can_move_right (struct world* w, Rectangle rect);
-*/
+
+void spawn_item(struct world* w, Vector2 pos, enum item_type type);
 
 #endif

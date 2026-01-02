@@ -39,8 +39,7 @@ void free_sprite(struct sprite* sprite);
 
 void sprite_set_anim(struct sprite* sprite, const char* name);
 void sprite_update_anim(struct sprite* sprite, float frametime);
-void render_sprite(struct sprite* sprite, Vector2 pos);
-
+void render_sprite(struct sprite* sprite, Vector2 pos, Color tint);
 
 
 #endif

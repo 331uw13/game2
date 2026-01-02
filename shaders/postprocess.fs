@@ -18,10 +18,20 @@ void main() {
 
     vec4 result = texture(texture_result, tx);
     vec3 bloom = texture(texture_bloom, tx).rgb;
+
+
+    float off = 0.00125f;
+    vec3 red_channel = texture(texture_result, tx+vec2(off, 0)).rgb * vec3(1, 0, 0);
+    vec3 cyan_channel = texture(texture_result, tx+vec2(off, 0)).rgb * vec3(0, 1, 1);
+
+    result.r *= 0.5f;
+    result.rgb += red_channel;
+
+    result.gb *= 0.5;
+    result.rgb += cyan_channel;
     result.rgb += bloom;
 
-
-    float line = 0.5+0.5*sin(frag_position.y*1.6 - time * 8);
+    float line = 0.5+0.5*sin(frag_position.y*1.5 - time * 8);
     line = line * 0.2 + 0.7;
     result *= line;
 

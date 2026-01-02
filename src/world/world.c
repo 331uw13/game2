@@ -5,8 +5,8 @@
 
 #include "world.h"
 #include "../memory.h"
-
-
+#include "../errmsg.h"
+#include "../state.h"
 
 
 void load_world(struct world* w, int chunks_width, int chunks_height) {
@@ -33,14 +33,14 @@ void free_world(struct world* w) {
     freeif(w->chunks);
 }
 
-void render_world(struct world* w) {
+void render_world(struct gstate* gst, struct world* w) {
     for(size_t i = 0; i < w->num_chunks; i++) {
-        render_chunk(&w->chunks[i]);
+        render_chunk(gst, &w->chunks[i]);
     } 
 }
 
 
-
+static
 struct chunk* get_chunk(struct world* w, int col, int row) {
     if(col < 0 || row < 0) {
         return NULL;
@@ -164,7 +164,7 @@ bool get_segment_intersection(Vector2 p, Vector2 direction, struct segment* s, V
 
 
 bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surface, Vector2* normal) {
-    int max_raylen = 300;
+    int max_raylen = 4;
     struct chunk_cell* cell = raycast_world(w, from, direction, max_raylen);
     if(!cell) {
         return false;
@@ -183,123 +183,6 @@ bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surf
     }
     return true;
 }
-
-/*
-bool can_move_up(struct world* w, Rectangle rect) {
-    Vector2 topleft = (Vector2){
-        rect.x + 8.0f,
-        rect.y - 1.0f
-    };
-
-    Vector2 topright = (Vector2){
-        rect.x + rect.width - 8.0f,
-        rect.y - 1.0f
-    };
-
-    struct chunk_cell* cell_l = raycast_world(w, topleft, NV_UP,  2);
-    struct chunk_cell* cell_r = raycast_world(w, topright, NV_UP, 2);
-
-    if(cell_l || cell_r) {
-        return false;
-    }
-    return true;
-}
-
-bool can_move_down(struct world* w, Rectangle rect) {
-    Vector2 bottomleft = (Vector2){
-        rect.x,
-        rect.y + rect.height 
-    };
-
-    Vector2 bottomright = (Vector2){
-        rect.x + rect.width,
-        rect.y + rect.height
-    };
-
-    struct chunk_cell* cell_l = raycast_world(w, bottomleft, NV_DOWN,  1);
-    struct chunk_cell* cell_r = raycast_world(w, bottomright, NV_DOWN, 1);
-
-    if(cell_l || cell_r) {
-        return false;
-    }
-    return true;
-}
-
-
-bool can_move_left(struct world* w, Rectangle rect) {
-    Vector2 topleft = (Vector2){
-        rect.x,
-        rect.y
-    };
-
-    Vector2 bottomleft = (Vector2){
-        rect.x,
-        rect.y + rect.height - 8
-    };
-
-    struct chunk_cell* cell_t = raycast_world(w, topleft,    NV_LEFT, 1);
-    struct chunk_cell* cell_b = raycast_world(w, bottomleft, NV_LEFT, 1);
-
-    if(cell_t) {
-        enum cell_slope top_slope = get_cell_slope(cell_t);
-        if(top_slope == C_SLOPE_CEILING
-        || top_slope == C_SLOPE_CEILING_LEFT
-        || top_slope == C_SLOPE_CEILING_RIGHT
-        || top_slope == C_SLOPE_VERTICAL) {
-            return false;
-        }
-    }
-
-
-    if(cell_b) {
-        enum cell_slope bottom_slope = get_cell_slope(cell_b);
-        if(bottom_slope != C_SLOPE_RIGHT
-        && bottom_slope != C_SLOPE_LEFT
-        && bottom_slope != C_SLOPE_FLAT) {
-            return false;
-        }
-
-    }
-
-    return true;
-}
-
-
-bool can_move_right(struct world* w, Rectangle rect) {
-    Vector2 topright = (Vector2){
-        rect.x + rect.width,
-        rect.y
-    };
-
-    Vector2 bottomright = (Vector2){
-        rect.x + rect.width,
-        rect.y + rect.height - 8
-    };
-
-    struct chunk_cell* cell_t = raycast_world(w, topright,    NV_RIGHT, 1);
-    struct chunk_cell* cell_b = raycast_world(w, bottomright, NV_RIGHT, 1);
-
-    if(cell_t) {
-        enum cell_slope top_slope = get_cell_slope(cell_t);
-        if(top_slope == C_SLOPE_CEILING
-        || top_slope == C_SLOPE_CEILING_LEFT
-        || top_slope == C_SLOPE_CEILING_RIGHT
-        || top_slope == C_SLOPE_VERTICAL) {
-            return false;
-        }
-    }
-
-    if(cell_b) {
-        enum cell_slope bottom_slope = get_cell_slope(cell_b);
-        if(bottom_slope != C_SLOPE_LEFT
-        && bottom_slope != C_SLOPE_RIGHT
-        && bottom_slope != C_SLOPE_FLAT) {
-            return false;
-        }
-    }
-
-    return true;
-}*/
 
 
 bool can_move_up(struct world* w, Vector2 center, float radius, Vector2* hit_normal) {
@@ -351,6 +234,29 @@ bool can_move_down(struct world* w, Vector2 center, float radius, Vector2* hit_n
 }
 
 
+void spawn_item(struct world* w, Vector2 pos, enum item_type type) {
+    int chunk_x = pos.x / (CHUNK_SIZE * w->chunks[0].scale);
+    int chunk_y = pos.y / (CHUNK_SIZE * w->chunks[0].scale);
+
+    struct chunk* chunk = get_chunk(w, chunk_x, chunk_y);
+    if(!chunk) {
+        errmsg("Item %i tried to spawn outside of world: %f, %f", type, pos.x, pos.y);
+        return;
+    }
+
+    if(chunk->num_items >= CHUNK_ITEMS_MAX) {
+        errmsg("Chunk is full of items.. TODO: Items should never get discarded if they cant spawn right away.");
+        return;
+    }
+
+
+    struct item* item = &chunk->items[chunk->num_items];
+    chunk->num_items++;
+
+    item->pos = pos;
+    item->type = type;
+    item->in_inventory = false;
+}
 
 
 

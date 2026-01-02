@@ -12,7 +12,7 @@
 
 #include "../memory.h"
 #include "../common.h"
-
+#include "../state.h"
 
 #include <stdio.h>
 
@@ -78,7 +78,7 @@ void load_chunk(struct chunk* chunk, int col, int row) {
     
     chunk->row = row;
     chunk->col = col;
-
+    chunk->num_items = 0;
     chunk->cells = calloc(CHUNK_SIZE * CHUNK_SIZE,
         sizeof *chunk->cells);
 
@@ -164,14 +164,83 @@ void free_chunk(struct chunk* chunk) {
     freeif(chunk->cells);
 }
 
-void render_chunk(struct chunk* chunk) {
 
+static
+void render_chunk_items(struct gstate* gst, struct chunk* chunk) {
+    
+    for(uint32_t i = 0; i < chunk->num_items; i++) {
+        struct item* item = &chunk->items[i];
+        if(item->type == ITEM_NONE) {
+            // TODO: Clean "none" items from chunks.
+            continue;
+        }
+
+        float item_scale = 0.7f;
+        Color item_tint = (Color){ 200, 200, 200, 255 };
+
+        Texture* item_tex = &gst->item_textures[item->type];
+
+        const float circle_radius = 13.0f;
+        Vector2 circle_center = (Vector2) {
+            item->pos.x - item_tex->width / (circle_radius / 2),
+            item->pos.y - item_tex->height / (circle_radius / 2)
+        };
+      
+        if(Vector2Distance(circle_center, gst->player.pos) < 40.0f) {
+        if(Vector2Distance(circle_center, gst->world_mouse_pos) <= circle_radius) {
+            //render_item_info(gst, item);
+          
+            item_scale = 0.75f;
+            item_tint = WHITE;
+
+
+            draw_text(gst, TextFormat(
+                        "%s\n"
+                        "(Rarity: %s)\n"
+                        "[E: Pickup]",
+                        gst->item_descs[item->type],
+                        item_rarity_to_str(gst->item_rarities[item->type]))
+                    , 
+                    (Vector2) {
+                        item->pos.x + 10,
+                        item->pos.y - 10
+                    },
+                    (Color){ 150, 120, 100, 100 + sin(GetTime()*10)*20 });
+
+            if(IsKeyPressed(KEY_E)) {
+                gst->player.pickedup_item = item;
+            }
+            
+            //DrawCircleLines(circle_center.x, circle_center.y, circle_radius, 
+            //        (Color){ 100, 100, 100, 100 });
+        }
+        }
+
+        draw_texture(*item_tex, 
+                (Vector2) {
+                    item->pos.x,
+                    item->pos.y
+                },
+                (Vector2){ 0, 0 }, 0.0f, item_scale, item_tint);
+
+
+
+
+
+        //DrawCircle(gst->world_mouse_pos.x, gst->world_mouse_pos.y, 2.0f, BLUE);
+    }
+}
+
+void render_chunk(struct gstate* gst, struct chunk* chunk) {
+
+    /*
     DrawRectangleLines(
                 chunk->row * CHUNK_SIZE * chunk->scale,
                 chunk->col * CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 BLUE);
+                */
 
     for(uint32_t i = 0; i < CHUNK_SIZE*CHUNK_SIZE; i++) {
         struct chunk_cell* s = &chunk->cells[i];
@@ -191,6 +260,8 @@ void render_chunk(struct chunk* chunk) {
                 c.y + s->segment.normal.y * 8,
                 RED);*/
     }
+
+    render_chunk_items(gst, chunk);
 }
 
 
@@ -224,7 +295,7 @@ struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p) {
     return &chunk->cells[ local_y * CHUNK_SIZE + local_x ];
 }
 
-
+/*
 enum cell_slope get_cell_slope(struct chunk_cell* cell) {
     if(!cell) {
         return C_SLOPE_NONE;
@@ -259,7 +330,7 @@ enum cell_slope get_cell_slope(struct chunk_cell* cell) {
     }
 
     return C_SLOPE_NONE;
-}
+}*/
 
 
 

@@ -14,7 +14,7 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
     }
 
 
-    float radius = 2.0f;
+    float radius = part->scale;
 
     Vector2 uphit_normal, downhit_normal, lefthit_normal, righthit_normal;
 
@@ -46,27 +46,6 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
         part->pos.x -= 1.0f;
         part->vel = Vector2Reflect(part->vel, righthit_normal);
     }
-    
-
-
-    /*
-    else
-    if(!allow_down) {
-        part->pos.y -= 1.0f;
-        part->vel.y = Vector2Reflect(part->vel, downhit_normal).y;
-    }
-    if(!allow_left) {
-        part->pos.x += 1.0f;
-        part->vel.x = Vector2Reflect(part->vel, lefthit_normal).x;
-    }
-    else
-    if(!allow_right) {
-        part->pos.x -= 1.0f;
-        part->vel.x = Vector2Reflect(part->vel, righthit_normal).x;
-    }
-    */
-
-
 }
 
 

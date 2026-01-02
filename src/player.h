@@ -27,7 +27,9 @@ struct player {
     bool onground;
     int  jump_counter;
     bool jumped;
-    
+    bool attack_button_pressed;
+    bool attack_button_down;
+
     float attack_timer;
     float attack_delay;
     bool  casting_spell;
@@ -35,10 +37,15 @@ struct player {
     
     int   attack_side; // -1 is to left, +1 is to right.
 
+
+    bool              using_inventory;
+    struct inventory* inventory;
+    struct item*      pickedup_item;
     // int mana;
     // int health;
 
-    struct psystem* spell_psys;
+    float spell_force;
+    struct psystem*    spell_psys;
     struct ps_emitter* spell_emitter;
 
     struct world* world;
@@ -47,7 +54,7 @@ struct player {
 
 struct gstate;
 
-void create_player(struct world* world, struct player* pl, Vector2 spawn_pos);
+void create_player(struct gstate* gst, struct world* world, struct player* pl, Vector2 spawn_pos);
 void update_player(struct gstate* gst, struct player* pl);
 void render_player(struct gstate* gst, struct player* pl);
 void player_jump(struct player* pl);
