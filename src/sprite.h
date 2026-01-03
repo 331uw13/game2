@@ -7,8 +7,9 @@
 
 
 
-#define ANIM_TEXTURES_MAX 32
 
+
+/*
 struct animation {
     Texture textures [ANIM_TEXTURES_MAX];
     uint16_t num_textures;
@@ -23,7 +24,7 @@ struct anim_map {
 };
 
 struct sprite {
-    struct anim_map* animations;
+    struct anim_map*  animations;
     struct animation* curr_anim;
     int flags;
 
@@ -40,6 +41,6 @@ void free_sprite(struct sprite* sprite);
 void sprite_set_anim(struct sprite* sprite, const char* name);
 void sprite_update_anim(struct sprite* sprite, float frametime);
 void render_sprite(struct sprite* sprite, Vector2 pos, Color tint);
-
+*/
 
 #endif

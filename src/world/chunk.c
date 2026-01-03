@@ -17,20 +17,54 @@
 #include <stdio.h>
 
 
+
 static
-float perlin_noise(Vector2 p, float freq) {
+float perlin_noise(Vector2 p, float freq_x, float freq_y) {
     return stb_perlin_noise3(
-            (p.x * freq) / ((float)CHUNK_SIZE / 10),
-            (p.y * freq) / ((float)CHUNK_SIZE / 10),
-            1.0f, 0, 0, 0);
+            (p.x * freq_x) / 10.0f,
+            (p.y * freq_y) / 10.0f,
+            100.0f, 0, 0, 0);
 }
 
-static
-float get_noise(Vector2 p) {
-    float n = perlin_noise(p, 0.6);
 
+static
+float get_surface_level(struct worldgen_config* worldgencfg, Vector2 p) {
+    
+    const float level = 50.0f;
+
+
+    return Lerp(0.0f, 1.0f, CLAMP(p.y / level, 0.0f, 1.0f));
+}
+
+
+static
+float get_noise(struct worldgen_config* worldgencfg, Vector2 p, Vector2 world_pos) {
+    float n = 0.0f;
+    float y = p.y / worldgencfg->world_size.y;
+
+    float freq = Lerp(0.2f, 0.5f, y * y * y);
+
+    n = perlin_noise(p, freq*2.0f, 1.0f);
+    n *= get_surface_level(worldgencfg, p);
     return n;
 }
+
+static
+enum chunk_cell_type get_chunk_cell_type
+(
+    struct worldgen_config* worldgencfg, 
+    struct chunk_cell* cell,
+    Vector2 cell_pos
+){
+    float grass_noise = perlin_noise(cell_pos, 0.5, 0.5f);
+
+    if(grass_noise < 0.0f) {
+        return T_ID_GRASS;
+    }
+        
+    return T_ID_DIRT;
+}
+
 
 
 const int cases[16][5] = {
@@ -74,8 +108,8 @@ const Vector2 cases_normals[16][2] = {
 };
 
 
-void load_chunk(struct chunk* chunk, int col, int row) {
-    
+void load_chunk(struct worldgen_config* worldgencfg, struct chunk* chunk, int col, int row) { 
+
     chunk->row = row;
     chunk->col = col;
     chunk->num_items = 0;
@@ -83,11 +117,11 @@ void load_chunk(struct chunk* chunk, int col, int row) {
         sizeof *chunk->cells);
 
 
+
     const float isolevel = 0.1f;
+    chunk->scale = worldgencfg->chunk_scale;
 
-    chunk->scale = 14;
-
-    for(int y = 0; y < CHUNK_SIZE; y++) {
+    for(int y = 0; y < CHUNK_SIZE; y++) { 
         for(int x = 0; x < CHUNK_SIZE; x++) {
 
 
@@ -95,6 +129,7 @@ void load_chunk(struct chunk* chunk, int col, int row) {
                 col * CHUNK_SIZE + x,
                 row * CHUNK_SIZE + y
             };
+    
 
 
             Vector2 points[4] = {
@@ -105,10 +140,10 @@ void load_chunk(struct chunk* chunk, int col, int row) {
             };
 
             float sq[4] = {
-                get_noise(points[0]),
-                get_noise(points[1]),
-                get_noise(points[2]),
-                get_noise(points[3])
+                get_noise(worldgencfg, points[0], p),
+                get_noise(worldgencfg, points[1], p),
+                get_noise(worldgencfg, points[2], p),
+                get_noise(worldgencfg, points[3], p)
             };
 
 
@@ -153,6 +188,7 @@ void load_chunk(struct chunk* chunk, int col, int row) {
                 cell->segment.vb = Vector2Scale(edge_points[cases[case_index][i+1]], chunk->scale);
                 cell->segment.normal = cases_normals[case_index][k];
                 cell->id = S_ID_SURFACE;
+                cell->type = get_chunk_cell_type(worldgencfg, cell, p);
                 chunk->num_cells++;
                 k++;
             }
@@ -231,6 +267,31 @@ void render_chunk_items(struct gstate* gst, struct chunk* chunk) {
     }
 }
 
+
+
+static
+void render_cell_grass(struct gstate* gst, struct chunk_cell* cell) {
+
+    int blades = 4;
+    float interp = 0.0f;
+    float interp_increment = 1.0f / (float)blades;
+
+    Vector2 direction = Vector2Scale(cell->segment.normal, 8.0f);
+
+    for(int i = 0; i < blades; i++) {
+        Vector2 p = Vector2Lerp(cell->segment.va, cell->segment.vb, interp);
+
+        DrawLine(
+                p.x,
+                p.y,
+                p.x + direction.x,
+                p.y + (direction.y - 2.0) * 0.5f,
+                GREEN);
+        interp += interp_increment;
+    }
+}
+
+
 void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
     /*
@@ -240,25 +301,45 @@ void render_chunk(struct gstate* gst, struct chunk* chunk) {
                 CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 BLUE);
-                */
-
+    */
     for(uint32_t i = 0; i < CHUNK_SIZE*CHUNK_SIZE; i++) {
-        struct chunk_cell* s = &chunk->cells[i];
-        
-        if(s->id != S_ID_SURFACE) { continue; }
-        DrawLine(s->segment.va.x, s->segment.va.y,
-                 s->segment.vb.x, s->segment.vb.y, 
-                 (Color){ 255, 90, 20, 255 });
-   
-        
+        struct chunk_cell* cell = &chunk->cells[i];
+
+        Color color = (Color){ 120, 120, 120, 255 };
+
+        switch(cell->type) {
+            case T_ID_GRASS:
+                color = GREEN;
+                render_cell_grass(gst, cell);
+                break;
+
+            case T_ID_DIRT:
+                color = (Color){ 150, 80, 50, 255 };
+                break;
+        }
+
+        if(cell->id != S_ID_SURFACE) { continue; }
+        DrawLine(cell->segment.va.x, cell->segment.va.y,
+                 cell->segment.vb.x, cell->segment.vb.y, 
+                 color);
+  
+        color.r *= 0.5f;
+        color.g *= 0.5f;
+        color.b *= 0.5f;
+
+        DrawLine(cell->segment.va.x, cell->segment.va.y + 1.25,
+                 cell->segment.vb.x, cell->segment.vb.y + 1.25, 
+                 color);
+        /*
         // Visualize normals.
-        /*Vector2 c = Vector2Lerp(s->segment.va, s->segment.vb, 0.5);
+        Vector2 c = Vector2Lerp(cell->segment.va, cell->segment.vb, 0.5);
         DrawLine(
                 c.x,
                 c.y,
-                c.x + s->segment.normal.x * 8,
-                c.y + s->segment.normal.y * 8,
-                RED);*/
+                c.x + cell->segment.normal.x * 8,
+                c.y + cell->segment.normal.y * 8,
+                RED);
+                */
     }
 
     render_chunk_items(gst, chunk);

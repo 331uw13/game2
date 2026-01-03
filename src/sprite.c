@@ -3,9 +3,10 @@
 #include <stdio.h>
 
 
+/*
 #define STB_DS_IMPLEMENTATION
 #include "thirdparty/stb_ds.h"
-
+*/
 
 #include "sprite.h"
 #include "string.h"
@@ -13,7 +14,7 @@
 
 
 
-
+/*
 static
 void load_animation(struct sprite* sprite, const char* folder, const char* name) {
 
@@ -167,4 +168,4 @@ void render_sprite(struct sprite* sprite, Vector2 pos, Color tint) {
             rotation,
             tint);
 }
-
+*/

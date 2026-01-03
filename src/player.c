@@ -20,22 +20,19 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->world = NULL;
     pl->jump_counter = 0;
     pl->attack_timer = 0.0f;
-    pl->attack_delay = 0.05f;
+    pl->attack_delay = 0.01f;
     pl->onground = false;
     pl->spell_force = 0.0f;
     pl->world = world;
     pl->using_inventory = false;
     pl->pickedup_item = NULL;
 
-    load_sprite(&pl->sprite, "./sprites/player");
-    sprite_set_anim(&pl->sprite, "idle");
 
     pl->spell_psys = new_psystem(world, "player_spell_psystem");
-    pl->spell_emitter = add_particle_emitter(pl->spell_psys, 1000, (Rectangle){ 0, 0, 20, 20 });
+    pl->spell_emitter = add_particle_emitter(pl->spell_psys, 2000, (Rectangle){ 0, 0, 20, 20 });
 
     pl->inventory = new_inventory(6, 1);
     pl->inventory->pos = (Vector2){ 10,  10 };
-
 
 
     //add_particle_mod(pl->spell_psys, PMOD_fire_particle);
@@ -45,7 +42,6 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
 }
 
 void free_player(struct player* pl) {
-    free_sprite(&pl->sprite);
     free_psystem(pl->spell_psys);
     free_inventory(pl->inventory);
 }
@@ -53,12 +49,12 @@ void free_player(struct player* pl) {
 
 static
 void stopped_moving(struct player* pl) {
-    sprite_set_anim(&pl->sprite, "idle");
+
 }
 
 static
 void started_moving(struct player* pl) {
-    sprite_set_anim(&pl->sprite, "walk");
+
 }
 
 static
@@ -78,12 +74,10 @@ void get_movement_input(struct player* pl, float frametime) {
 
     if(IsKeyDown(KEY_A)) {
         pl->vel.x -= frametime * speed;
-        pl->sprite.flags |= SPRITE_FLIP_HORIZONTAL;
     }
     else
     if(IsKeyDown(KEY_D)) {
         pl->vel.x += frametime * speed;
-        pl->sprite.flags &= ~SPRITE_FLIP_HORIZONTAL;
     }
     
     if(IsKeyPressed(KEY_SPACE)) {
@@ -113,18 +107,19 @@ void player_jump(struct player* pl) {
 
 
 
-
+/*
 static
 void set_player_onground(struct player* pl) {
     if(pl->got_surface) {
-        pl->pos.y = pl->surface.y - pl->sprite.height / 2;
+        pl->pos.y = pl->surface.y;
+        //pl->pos.y = pl->surface.y - pl->sprite.height / 2;
     }
-}
+}*/
 
 
 static
 void update_position(struct player* pl, float frametime) {
-    pl->head_pos.x = pl->pos.x + pl->sprite.width / 2;
+    /*pl->head_pos.x = pl->pos.x + pl->sprite.width / 2;
     pl->head_pos.y = pl->pos.y + 10;
     
     pl->body_pos.x = pl->pos.x + pl->sprite.width / 2;
@@ -132,8 +127,7 @@ void update_position(struct player* pl, float frametime) {
     
     pl->feet_pos.x = pl->pos.x + pl->sprite.width / 2;
     pl->feet_pos.y = pl->pos.y + pl->sprite.height - 8;
-
-
+    */
 
 
     const float chunk_scale = pl->world->chunks[0].scale;
@@ -154,19 +148,22 @@ void update_position(struct player* pl, float frametime) {
     float radius = 10.0f;
     Vector2 center = (Vector2){
         pl->pos.x,
-        pl->pos.y + 6
+        pl->pos.y
     };
 
 
-    //DrawCircleLines(center.x, center.y, radius, RED);
+    if(IsKeyDown(KEY_LEFT_ALT)) {
+        pl->pos = pl->want_pos;
+        return;
+    }
+
+    DrawCircleLines(center.x, center.y, radius, RED);
 
 
     pl->got_surface = get_surface(pl->world, center, NV_DOWN, &pl->surface, NULL);
 
 
-    // Do final checking.
-
-
+    // Terrain collision checking.
 
     bool allow_move_up     = can_move_up(pl->world, center, radius, NULL);
     bool allow_move_down   = can_move_down(pl->world, center, radius, NULL);
@@ -186,52 +183,41 @@ void update_position(struct player* pl, float frametime) {
     if(want_move_left && allow_move_left) {
         pl->pos.x = pl->want_pos.x;
     }
-    else
-    if(want_move_left && allow_move_up) {
-        center.y = pl->want_pos.y;
-        if(can_move_left(pl->world, center, radius, NULL)) {
-            pl->pos.x = pl->want_pos.x;
-        }
-    }
-
 
     // Handle Right movement.
 
     if(want_move_right && allow_move_right) {
         pl->pos.x = pl->want_pos.x;
     }
-    else
-    if(want_move_right && allow_move_up) {
-        center.y = pl->want_pos.y;
-        if(can_move_right(pl->world, center, radius, NULL)) {
-            pl->pos.x = pl->want_pos.x;
-        }
-    }
-    
+   
  
+
+    // Handle Up movement.
+
     if(want_move_up && allow_move_up) {
         pl->pos.y = pl->want_pos.y;
     }
 
+
+    // Handle Down movement.
+
     if(want_move_down && allow_move_down) {
         pl->pos.y = pl->want_pos.y;
-    }
-    else 
-    if(want_move_down) {        
-        set_player_onground(pl);
-        pl->vel.y = 0;
     }
 
 
     if(pl->got_surface) {
-        pl->onground = (pl->pos.y + pl->sprite.height/2 > pl->surface.y-1);
+        pl->onground = (pl->pos.y + radius > pl->surface.y - 1.0f);
+        // pl->onground = (pl->pos.y + pl->sprite.height/2 > pl->surface.y-1);
     }
     else {
         pl->onground = false;
     }
 
-    if(pl->onground && !pl->jumped) {
+    if(pl->onground && !pl->jumped && want_move_down) {
         pl->jump_counter = 0;
+        pl->vel.y = 0;
+        pl->pos.y = (pl->surface.y - radius) - 0.1f;
     }
     
     if(!pl->onground) {
@@ -295,9 +281,20 @@ static
 void player_added_item(struct gstate* gst, struct player* pl, enum item_type item_type) {
 
     switch(item_type) {
+        case ITEM_WAND: break; // Ignored. This is the default item player has.
+
         case ITEM_FIREBEND:
             add_particle_mod(pl->spell_psys, PMOD_fire_particle);
             pl->spell_force += 1.5f;
+            break;
+    
+        case ITEM_PLASMABEND:
+            add_particle_mod(pl->spell_psys, PMOD_plasma_particle);
+            pl->spell_force += 1.75f;
+            break;
+        
+        case ITEM_GRAVITYBEND:
+            add_particle_mod(pl->spell_psys, PMOD_gravity_particle);
             break;
     
         case ITEM_MIRROR_PARTICLE:
@@ -309,6 +306,7 @@ void player_added_item(struct gstate* gst, struct player* pl, enum item_type ite
             pl->spell_emitter->cfg.initial_scale += 2.0f;
             pl->spell_force += 6.0f;
             break;
+
     }
 
 }
@@ -364,7 +362,6 @@ void update_player(struct gstate* gst, struct player* pl) {
 
     update_position(pl, gst->frametime);
     update_attacking(gst, pl);
-    sprite_update_anim(&pl->sprite, gst->frametime);
 
     update_psystem(gst, pl->spell_psys);
     
@@ -398,8 +395,7 @@ void render_player(struct gstate* gst, struct player* pl) {
 
     render_inventory(gst, pl->inventory);
     
-    render_sprite(&pl->sprite, pl->pos, (Color){ 200, 150, 130, 255 });
-    render_psystem(pl->spell_psys);
+    render_psystem(gst, pl->spell_psys);
     render_pickedup_item(gst, pl);
 
     if(pl->attack_button_down && !pl->using_inventory && pl->spell_psys->num_particle_mods > 1) {

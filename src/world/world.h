@@ -3,10 +3,17 @@
 
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "chunk.h"
 #include "../direction.h"
 
+
+
+
+
+struct psystem;
+struct ps_emitter;
 
 
 struct world {
@@ -14,6 +21,10 @@ struct world {
     size_t        num_chunks;
     int           num_chunks_x;
     int           num_chunks_y;
+
+
+    struct psystem*    fire_psystem;
+    struct ps_emitter* fire_emitter;
 };
 
 

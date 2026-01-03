@@ -20,23 +20,23 @@
 
 #define RESOLUTION_DIV  2.0
 
-
-/*
-static struct psystem*  test_psys;
-static struct ps_emitter*  test_emitter_A;
-static struct ps_emitter*  test_emitter_B;
-*/
-
 static
 void load_item_textures(struct gstate* gst) {
-    
+   
+    // This will not be the final item loading "system"
+    // just for testing...
+
     gst->item_textures[ITEM_WAND] = LoadTexture("./textures/wand.png");
     gst->item_textures[ITEM_FIREBEND] = LoadTexture("./textures/firebend.png");
+    gst->item_textures[ITEM_PLASMABEND] = LoadTexture("./textures/plasmabend.png");
     gst->item_textures[ITEM_PARTICLE_GROWTH] = LoadTexture("./textures/particle_growth.png");
     gst->item_textures[ITEM_MIRROR_PARTICLE] = LoadTexture("./textures/mirror_particle.png");
+    gst->item_textures[ITEM_GRAVITYBEND] = LoadTexture("./textures/gravitybend.png");
 
     gst->item_descs[ITEM_WAND] = strdup("Many centuries old staff.");
     gst->item_descs[ITEM_FIREBEND] = strdup("Firebend spell modifier.");
+    gst->item_descs[ITEM_PLASMABEND] = strdup("Plasmabend spell modifier.");
+    gst->item_descs[ITEM_GRAVITYBEND] = strdup("Gravitybend spell modifier.");
     gst->item_descs[ITEM_PARTICLE_GROWTH] = strdup("Particle growth spell modifier.");
     gst->item_descs[ITEM_MIRROR_PARTICLE] = strdup("Mirror particle spell modifier.");
 
@@ -44,7 +44,9 @@ void load_item_textures(struct gstate* gst) {
     
     gst->item_rarities[ITEM_PARTICLE_GROWTH] = COMMON_ITEM;
     gst->item_rarities[ITEM_FIREBEND] = RARE_ITEM;
-    gst->item_rarities[ITEM_MIRROR_PARTICLE] = RARE_ITEM;
+    gst->item_rarities[ITEM_PLASMABEND] = RARE_ITEM;
+    gst->item_rarities[ITEM_GRAVITYBEND] = EPIC_ITEM;
+    gst->item_rarities[ITEM_MIRROR_PARTICLE] = COMMON_ITEM;
 
 }
 
@@ -60,26 +62,20 @@ const char* item_rarity_to_str(enum item_rarity rarity) {
 
 static
 void spawn_starting_spells(struct gstate* gst, Vector2 pos) {
-   
-    pos.y += 10;
-    
-    spawn_item(gst->player.world, pos, ITEM_FIREBEND);
-    pos.x += 40;
 
-    spawn_item(gst->player.world, pos, ITEM_PARTICLE_GROWTH);
-    pos.x += 40;
 
-    spawn_item(gst->player.world, pos, ITEM_MIRROR_PARTICLE);
-    pos.x += 40;
+    Vector2 origin = pos;
 
-    spawn_item(gst->player.world, pos, ITEM_FIREBEND);
-    pos.x += 40;
 
-    spawn_item(gst->player.world, pos, ITEM_PARTICLE_GROWTH);
-    pos.x += 40;
-
-    spawn_item(gst->player.world, pos, ITEM_MIRROR_PARTICLE);
-    pos.x += 40;
+    for(int n = 0; n < 3; n++) {
+        for(int i = 0; i < ITEM_TYPES_COUNT; i++) {
+            spawn_item(gst->player.world, pos, i);
+        
+            pos.x += 32;
+        }
+        pos.y += 32;
+        pos.x = origin.x;
+    }
 
 
 }
@@ -89,8 +85,8 @@ struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
 
     InitWindow(1200, 800, "game2");
-    //ToggleBorderlessWindowed();
-  
+   
+    ToggleBorderlessWindowed();
     int monitor = GetCurrentMonitor();
     int mon_width = GetMonitorWidth(monitor);
     int mon_height = GetMonitorHeight(monitor);
@@ -123,17 +119,19 @@ struct gstate* gstate_init() {
     init_bloom(gst->screen_width, gst->screen_height);
 
 
+    srand(time(NULL));
+
     load_world(&gst->world, 4, 4);
     create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
     //create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
 
 
 
+    init_perlin_noise();
     srand48(time(NULL));
 
 
-    init_perlin_noise();
-            
+       
 
 
     // Spawn first spell options.

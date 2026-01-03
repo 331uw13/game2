@@ -6,6 +6,7 @@
 
 #include "functions.h"
 #include "../perlin_noise.h"
+#include "../common.h"
 
 
 void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
@@ -13,6 +14,9 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
         return;
     }
 
+
+    part->vel.x = CLAMP(part->vel.x, -30.0f, 30.0f);
+    part->vel.y = CLAMP(part->vel.y, -30.0f, 30.0f);
 
     float radius = part->scale;
 
@@ -34,7 +38,7 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
     
     if(!allow_down) {
         part->pos.y -= 1.0f;
-        part->vel = Vector2Reflect(part->vel, downhit_normal);
+        part->vel = Vector2Reflect(part->vel, downhit_normal); 
     }
 
     if(!allow_left) {
@@ -46,6 +50,14 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
         part->pos.x -= 1.0f;
         part->vel = Vector2Reflect(part->vel, righthit_normal);
     }
+
+    /*
+    if(!allow_up || !allow_right || !allow_left || !allow_down) {
+        emitter->psystem->world->fire_emitter->cfg.spawn_rect.x = part->pos.x;
+        emitter->psystem->world->fire_emitter->cfg.spawn_rect.y = part->pos.y;
+        add_particles(gst, emitter->psystem->world->fire_psystem, 1);
+    }
+    */
 }
 
 

@@ -9,12 +9,18 @@
 
 
 
+
 void fire_particle_update(PARTICLE_MOD_FUNC_ARGS) {
     float time = GetTime() * 2.0;
-    float noise = 8.0f * perlin_noise_2D(
-            part->pos.x * 0.02,
-            part->pos.y * 0.02 + time);
+   
+    float noise = 0.0f;
 
+    if(!part->lazy_update) {
+        noise = 8.0f * perlin_noise_2D(
+                part->pos.x * 0.02,
+                part->pos.y * 0.02 + time);
+    }
+    
     float ax = (cos(noise) / M_PI);
     float ay = (sin(noise) / M_PI);
     part->vel.x += ax * (gst->frametime * 15.0f);
@@ -33,7 +39,7 @@ void fire_particle_death(PARTICLE_MOD_FUNC_ARGS) {
 void fire_particle_spawn(PARTICLE_MOD_FUNC_ARGS) { 
     float color_t = drand48();
     part->color = ColorLerp(RED, ORANGE, color_t * color_t);
-    part->lifetime += (drand48() * 2.0 + 0.5f);
+    part->lifetime += drand48() * 3.0f + 0.1f;
 }
 
 void PMOD_fire_particle(PARTICLE_MOD_FUNC_ARGS) {

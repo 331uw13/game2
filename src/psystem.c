@@ -12,6 +12,8 @@ struct psystem* new_psystem(struct world* world, const char* name) {
     ps->num_emitters = 0;
     ps->name = strdup(name);
     ps->world = world;
+    ps->num_particle_mods = 0;
+    ps->num_emitters = 0;
     return ps;
 }
 
@@ -32,15 +34,13 @@ struct ps_emitter* add_particle_emitter(struct psystem* ps, uint32_t max_particl
     emitter->next_particle_index = 0;
     emitter->num_particles = 0;
     emitter->psystem = ps;
-    
+
     emitter->cfg.spawn_rect = spawn_rect;
     emitter->cfg.initial_velocity = (Vector2){ 0, 0 };
-    emitter->cfg.initial_scale = 2.35f;
+    emitter->cfg.initial_scale = 2.0f;
 
     for(uint32_t i = 0; i < emitter->max_particles; i++) {
         struct particle* part = &emitter->particles[i];
-        part->next = NULL;
-        part->prev = NULL;
         part->alive = false;
         part->index = i;
     }
@@ -51,6 +51,10 @@ struct ps_emitter* add_particle_emitter(struct psystem* ps, uint32_t max_particl
 
 static
 int find_dead_index(struct ps_emitter* emitter) {
+    if(emitter->num_particles >= emitter->max_particles) {
+        return -1;
+    }
+
     struct particle* part = emitter->particles + emitter->next_particle_index;
 
     if(!part->alive) {
@@ -133,12 +137,29 @@ void add_particle_mod(struct psystem* ps, particle_mod_fn* mod) {
 }
 
 void update_psystem(struct gstate* gst, struct psystem* ps) {
+    
+    float left_edge  = gst->player.pos.x - gst->screen_width / 2;
+    float right_edge = gst->player.pos.x + gst->screen_width / 2;
+    
+    float top_edge    = gst->player.pos.y - gst->screen_height / 2;
+    float bottom_edge = gst->player.pos.y + gst->screen_height / 2;
+
+
+
     for(uint32_t mi = 0; mi < ps->num_particle_mods; mi++) {
         for(uint32_t ei = 0; ei < ps->num_emitters; ei++) {
             struct ps_emitter* emitter = &ps->emitters[ei];
 
+
             for(uint32_t pi = 0; pi < emitter->max_particles; pi++) {
                 struct particle* part = &emitter->particles[pi];
+
+                part->lazy_update = (
+                       part->pos.x < left_edge
+                    || part->pos.y < top_edge
+                    || part->pos.x > right_edge
+                    || part->pos.y > bottom_edge
+                );
 
                 if(!part->alive) {
                     continue;
@@ -146,7 +167,7 @@ void update_psystem(struct gstate* gst, struct psystem* ps) {
 
                 part->lifetime -= gst->frametime;
                 if(part->lifetime < 0.0f) {
-                    ps->particle_mods[mi](PMODCTX_PARTICLE_DEATH, gst, emitter, part);
+                    //ps->particle_mods[mi](PMODCTX_PARTICLE_DEATH, gst, emitter, part);
                     remove_particle(emitter, part->index);
                     continue;
                 }
@@ -159,32 +180,19 @@ void update_psystem(struct gstate* gst, struct psystem* ps) {
 
 
 
-void render_psystem(struct psystem* ps) {
+void render_psystem(struct gstate* gst, struct psystem* ps) {
     for(uint32_t i = 0; i < ps->num_emitters; i++) {
         struct ps_emitter* emitter = &ps->emitters[i];
 
 
         for(uint32_t i = 0; i < emitter->max_particles; i++) {
             struct particle* part = &emitter->particles[i];
-            if(!part->alive) {
+            if(!part->alive || part->lazy_update) {
                 continue;
             }
 
-
             DrawRectangle(part->pos.x, part->pos.y, part->scale, part->scale, part->color);
-            //DrawCircle(part->pos.x, part->pos.y, 2.0, part->color);
-        }
-
-
-        /*
-        DrawCircle(emitter->cfg.spawn_rect.x, emitter->cfg.spawn_rect.y, 1.0, BLUE);
-        DrawRectangleLines(
-                emitter->cfg.spawn_rect.x - emitter->cfg.spawn_rect.width / 2,
-                emitter->cfg.spawn_rect.y - emitter->cfg.spawn_rect.height / 2,
-                emitter->cfg.spawn_rect.width,
-                emitter->cfg.spawn_rect.height,
-                (Color){ 30, 200, 200, 80 }
-                );*/
+        } 
     }
 }
 

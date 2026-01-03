@@ -20,10 +20,13 @@ struct particle {
     Color   color;
     float   scale;
 
-    struct particle* prev;
-    struct particle* next;
     bool             alive;
     uint32_t         index;
+
+    // If the particle is offscreen this is set to 'true'
+    // and particle modifier functions dont need to add 
+    // special effects.
+    bool lazy_update;
 };
 
 
@@ -38,6 +41,7 @@ struct ps_emitter {
     uint32_t         num_particles;
     uint32_t         max_particles;
     uint32_t         next_particle_index;
+
 
     struct psystem* psystem;
     struct ps_emitter_config cfg;
@@ -75,7 +79,7 @@ void add_particle_mod(struct psystem* ps, particle_mod_fn* mod);
 void remove_particle(struct ps_emitter* emitter, uint32_t index);
 
 void update_psystem(struct gstate* gst, struct psystem* ps);
-void render_psystem(struct psystem* ps);
+void render_psystem(struct gstate* gst, struct psystem* ps);
 void free_psystem(struct psystem* ps);
 
 void show_link_list(struct ps_emitter* emitter);

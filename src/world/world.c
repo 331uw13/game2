@@ -16,13 +16,32 @@ void load_world(struct world* w, int chunks_width, int chunks_height) {
     w->num_chunks = chunks_height * chunks_width;
     w->chunks = calloc(w->num_chunks, sizeof *w->chunks);
 
+
+    struct worldgen_config worldgencfg;
+    worldgencfg.chunk_scale = 10.0f;
+    worldgencfg.world_size = (Vector2){ 
+        .x = chunks_width * CHUNK_SIZE + 1,
+        .y = chunks_height * CHUNK_SIZE + 1,
+    };
+
+
     for(int y = 0; y < chunks_height; y++) {
         for(int x = 0; x < chunks_width; x++) {
-           
-            load_chunk(&w->chunks[y * chunks_width + x], x, y);
-
+            load_chunk(&worldgencfg, &w->chunks[y * chunks_width + x], x, y);
         }
     }
+
+    /*
+
+    w->fire_psystem = new_psystem(w, "world_psystem_fire");
+    w->fire_emitter = add_particle_emitter
+        (w->fire_psystem, 1024, (Rectangle){ 0, 0, 1, 1 });
+
+    add_particle_mod(w->fire_psystem, PMOD_fire_particle);
+    add_particle_mod(w->fire_psystem, PMOD_physical_particle);
+    */
+
+    printf("World size = W: %0.2f, H: %0.2f\n", worldgencfg.world_size.x, worldgencfg.world_size.y);
 }
 
 
@@ -30,6 +49,9 @@ void free_world(struct world* w) {
     for(size_t i = 0; i < w->num_chunks; i++) {
         free_chunk(&w->chunks[i]);
     }
+
+    //free_psystem(w->fire_psystem);
+
     freeif(w->chunks);
 }
 
@@ -37,7 +59,11 @@ void render_world(struct gstate* gst, struct world* w) {
     for(size_t i = 0; i < w->num_chunks; i++) {
         render_chunk(gst, &w->chunks[i]);
     } 
+   
+    //update_psystem(gst, w->fire_psystem);
+    //render_psystem(w->fire_psystem);
 }
+
 
 
 static
@@ -113,6 +139,7 @@ struct chunk_cell* raycast_world
         struct chunk_cell* cell = get_world_chunk_cell(w,
                 ray_x / w->chunks[0].scale, 
                 ray_y / w->chunks[0].scale);
+    
         if(cell && (cell->id == S_ID_SURFACE || cell->id == S_ID_FULL)) {
             // Use segment normal and ray direction
             // to know if the ray got stuck at starting position.
@@ -164,7 +191,7 @@ bool get_segment_intersection(Vector2 p, Vector2 direction, struct segment* s, V
 
 
 bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surface, Vector2* normal) {
-    int max_raylen = 4;
+    int max_raylen = 3;
     struct chunk_cell* cell = raycast_world(w, from, direction, max_raylen);
     if(!cell) {
         return false;
