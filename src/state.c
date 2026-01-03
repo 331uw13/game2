@@ -50,6 +50,16 @@ void load_item_textures(struct gstate* gst) {
 
 }
 
+static
+void load_animations(struct gstate* gst) {
+
+    load_animation(&gst->animations[ANIM_PLAYER_IDLE], "./animations/player/idle");
+    load_animation(&gst->animations[ANIM_PLAYER_WALK], "./animations/player/walk");
+    
+    load_animation(&gst->animations[ANIM_ENEMY_BAT_FLY], "./animations/enemy_bat/fly");
+
+}
+
 const char* item_rarity_to_str(enum item_rarity rarity) {
     switch(rarity) {
         case COMMON_ITEM: return "Common";
@@ -63,12 +73,10 @@ const char* item_rarity_to_str(enum item_rarity rarity) {
 static
 void spawn_starting_spells(struct gstate* gst, Vector2 pos) {
 
-
     Vector2 origin = pos;
 
-
     for(int n = 0; n < 3; n++) {
-        for(int i = 0; i < ITEM_TYPES_COUNT; i++) {
+        for(uint32_t i = 0; i < ITEM_TYPES_COUNT; i++) {
             spawn_item(gst->player.world, pos, i);
         
             pos.x += 32;
@@ -76,8 +84,6 @@ void spawn_starting_spells(struct gstate* gst, Vector2 pos) {
         pos.y += 32;
         pos.x = origin.x;
     }
-
-
 }
 
 
@@ -114,16 +120,18 @@ struct gstate* gstate_init() {
             NO_GEOMETRY_SHADER,
             &gst->shaders[SHADER_POSTPROCESS]);
 
-
     load_item_textures(gst);
+    load_animations(gst);
+
     init_bloom(gst->screen_width, gst->screen_height);
 
 
     srand(time(NULL));
 
     load_world(&gst->world, 4, 4);
-    create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
-    //create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
+    
+    //create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
+    create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
 
 
 
@@ -145,14 +153,17 @@ struct gstate* gstate_init() {
 
 void free_gstate(struct gstate* gst) {
 
-    for(int i = 0; i < SHADERS_COUNT; i++) {
+    for(uint32_t i = 0; i < SHADERS_COUNT; i++) {
         free_shader(&gst->shaders[i]);
     }
-    for(int i = 0; i < ITEM_TYPES_COUNT; i++) {
+    for(uint32_t i = 0; i < ITEM_TYPES_COUNT; i++) {
         UnloadTexture(gst->item_textures[i]);
         freeif(gst->item_descs[i]);
     }
- 
+    for(uint32_t i = 0; i < ANIMATIONS_COUNT; i++) {
+        free_animation(&gst->animations[i]);
+    }
+
     free_player(&gst->player);
     free_world(&gst->world);
     free_bloom();
@@ -315,11 +326,12 @@ void gstate_rungame(struct gstate* gst) {
     
         EndShaderMode();
         DrawFPS(5, GetScreenHeight()-25);
-        DrawText(TextFormat("X: %i, Y: %i | onground: %s | jumps: %i",
+        DrawText(TextFormat("X: %i, Y: %i onground: %s | jumps: %i | moving: %s",
                     (int)gst->player.pos.x,
                     (int)gst->player.pos.y,
                     gst->player.onground ? "yes" : "no",
-                    gst->player.jump_counter
+                    gst->player.jump_counter,
+                    gst->player.moving ? "yes" : "no"
                     ),
                 120,
                 GetScreenHeight()-25,

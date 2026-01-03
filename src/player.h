@@ -23,6 +23,7 @@ struct player {
     bool    got_surface;
 
     bool moving;
+    bool was_moving;
     bool onground;
     int  jump_counter;
     bool jumped;
@@ -47,6 +48,7 @@ struct player {
     struct psystem*    spell_psys;
     struct ps_emitter* spell_emitter;
 
+    struct sprite sprite;
     struct world* world;
 };
 

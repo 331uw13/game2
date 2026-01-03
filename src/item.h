@@ -1,10 +1,12 @@
 #ifndef ITEM_H
 #define ITEM_H
 
+
+#include <stdint.h>
 #include <raylib.h>
 
 
-enum item_type : int {
+enum item_type : uint32_t {
     ITEM_WAND = 0,
     ITEM_FIREBEND,
     ITEM_PARTICLE_GROWTH,

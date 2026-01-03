@@ -4,17 +4,35 @@
 #include <stdint.h>
 #include <raylib.h>
 
-#define ANIM_TEXTURES_MAX 32
+#define ANIMATION_TEXTURES_MAX 32
 
 
-struct animation {
-    Texture  textures [ANIM_TEXTURES_MAX];
-    uint16_t num_textures;
+
+
+enum animations : uint32_t {
+    ANIM_PLAYER_IDLE = 0, 
+    ANIM_PLAYER_WALK,
+
+    ANIM_ENEMY_BAT_FLY,
+
+
+
+    ANIMATIONS_COUNT
 };
 
 
-bool load_animation(struct animation* anim, const char* path);
+
+struct animation {
+    Texture  textures [ANIMATION_TEXTURES_MAX];
+    uint32_t num_textures;
+};
+
+
+// load_animation() expects that
+// textures are named like this: 0.png, 1.png, 2.png ...
+bool load_animation(struct animation* anim, char* directory);
 void free_animation(struct animation* anim);
+
 
 
 #endif

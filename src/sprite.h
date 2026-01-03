@@ -5,7 +5,31 @@
 #include <raylib.h>
 
 
+#include "animation.h"
 
+
+#define SPRITE_FLIP_VERTICAL (1 << 0)
+#define SPRITE_FLIP_HORIZONTAL (1 << 1)
+
+struct sprite {
+    int flags;
+    struct animation* animptr;
+
+    // Max animation texture width and height.
+    int max_width;
+    int max_height;
+
+    float    anim_timer;
+    float    anim_timer_interval;
+    uint32_t anim_texture_index;
+};
+
+
+struct sprite null_sprite();
+void sprite_set_animation(struct sprite* sprite, struct animation* animptr);
+
+void update_sprite_animation(struct sprite* sprite, float frametime);
+void render_sprite(struct sprite* sprite, Vector2 pos);
 
 
 

@@ -35,6 +35,9 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->inventory->pos = (Vector2){ 10,  10 };
 
 
+    pl->sprite = null_sprite();
+    sprite_set_animation(&pl->sprite, &gst->animations[ANIM_PLAYER_IDLE]);
+
     //add_particle_mod(pl->spell_psys, PMOD_fire_particle);
     
     //add_particle_mod(pl->spell_psys, PMOD_default_particle);
@@ -46,16 +49,6 @@ void free_player(struct player* pl) {
     free_inventory(pl->inventory);
 }
 
-
-static
-void stopped_moving(struct player* pl) {
-
-}
-
-static
-void started_moving(struct player* pl) {
-
-}
 
 static
 void get_movement_input(struct player* pl, float frametime) {
@@ -85,18 +78,8 @@ void get_movement_input(struct player* pl, float frametime) {
     }
     
 
-    if(Vector2Distance(old_vel, pl->vel) > 0.1f) {
-        if(!pl->moving) {
-            started_moving(pl);
-        }
-        pl->moving = true;
-    }
-    else {
-        if(pl->moving) {
-            stopped_moving(pl);
-        }
-        pl->moving = false;
-    }
+    pl->was_moving = pl->moving;
+    pl->moving = (Vector2Distance(old_vel, pl->vel) > 0.1f);
 }
 
 void player_jump(struct player* pl) {
@@ -197,7 +180,11 @@ void update_position(struct player* pl, float frametime) {
     if(want_move_up && allow_move_up) {
         pl->pos.y = pl->want_pos.y;
     }
-
+    else
+    if(!allow_move_up) {
+        pl->vel.y = 0.0f;
+        pl->pos.y += 1.0f;
+    }
 
     // Handle Down movement.
 
@@ -208,7 +195,6 @@ void update_position(struct player* pl, float frametime) {
 
     if(pl->got_surface) {
         pl->onground = (pl->pos.y + radius > pl->surface.y - 1.0f);
-        // pl->onground = (pl->pos.y + pl->sprite.height/2 > pl->surface.y-1);
     }
     else {
         pl->onground = false;
@@ -362,15 +348,28 @@ void update_player(struct gstate* gst, struct player* pl) {
 
     update_position(pl, gst->frametime);
     update_attacking(gst, pl);
+    update_sprite_animation(&pl->sprite, gst->frametime);
 
     update_psystem(gst, pl->spell_psys);
     
 
+    if(pl->vel.x < -0.001f) {
+        pl->sprite.flags |= SPRITE_FLIP_HORIZONTAL;
+    }
+    else
+    if(pl->vel.x > 0.001f) {
+        pl->sprite.flags &= ~SPRITE_FLIP_HORIZONTAL;
+    }
 
-
-
-
-
+    if(pl->moving && !pl->was_moving) {
+        // Started moving.
+        sprite_set_animation(&pl->sprite, &gst->animations[ANIM_PLAYER_WALK]);
+    }
+    else
+    if(!pl->moving && pl->was_moving) {
+        // Stopped moving.
+        sprite_set_animation(&pl->sprite, &gst->animations[ANIM_PLAYER_IDLE]);
+    }
 }
 
 
@@ -393,6 +392,7 @@ void render_pickedup_item(struct gstate* gst, struct player* pl) {
 
 void render_player(struct gstate* gst, struct player* pl) {
 
+    render_sprite(&pl->sprite, (Vector2) { pl->pos.x, pl->pos.y - 6.0f });
     render_inventory(gst, pl->inventory);
     
     render_psystem(gst, pl->spell_psys);

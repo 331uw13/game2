@@ -4,12 +4,13 @@
 #include <stdint.h>
 #include <raylib.h>
 
+#include "animation.h"
 #include "player.h"
 #include "world/world.h"
 #include "psystem.h"
 
 
-enum shader_indices : int {
+enum shaders : uint32_t {
     SHADER_NONE = 0,
     SHADER_POSTPROCESS,
 
@@ -32,6 +33,7 @@ struct gstate {
     struct world  world;
     struct player player;
 
+    struct animation animations       [ANIMATIONS_COUNT];
 
     Texture item_textures             [ITEM_TYPES_COUNT];
     char* item_descs                  [ITEM_TYPES_COUNT];
