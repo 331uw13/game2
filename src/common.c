@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <raylib.h>
+#include <raymath.h>
 #include <math.h>
 
 #include "common.h"
@@ -25,4 +26,12 @@ void draw_texture(Texture tex, Vector2 pos, Vector2 center_offset, float rotatio
             },
             rotation,
             tint);
+}
+
+
+Vector2 random_normal() {
+    return Vector2Normalize((Vector2){
+                drand48() * 2.0f - 1.0f,
+                drand48() * 2.0f - 1.0f
+            });
 }

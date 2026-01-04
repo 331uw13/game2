@@ -27,7 +27,7 @@ void load_world(struct world* w, int chunks_width, int chunks_height) {
 
     for(int y = 0; y < chunks_height; y++) {
         for(int x = 0; x < chunks_width; x++) {
-            load_chunk(&worldgencfg, &w->chunks[y * chunks_width + x], x, y);
+            load_chunk(&worldgencfg, w, &w->chunks[y * chunks_width + x], x, y);
         }
     }
 
@@ -65,8 +65,6 @@ void render_world(struct gstate* gst, struct world* w) {
 }
 
 
-
-static
 struct chunk* get_chunk(struct world* w, int col, int row) {
     if(col < 0 || row < 0) {
         return NULL;
@@ -98,8 +96,12 @@ struct chunk_cell* get_world_chunk_cell_v(struct world* w, Vector2 p) {
 }
 
 struct chunk_cell* raycast_world
-    (struct world* w, Vector2 start, Vector2 direction, int max_len) {
-    
+    (struct world* w, Vector2 start, Vector2 direction, int max_len, Vector2* ray_pos) {
+    if(w == NULL) {
+        errmsg("world == NULL");
+        return NULL;
+    }
+
     Vector2 end = Vector2Add(start, Vector2Scale(direction, max_len));
 
     int start_x = (int)floor(start.x);
@@ -140,6 +142,11 @@ struct chunk_cell* raycast_world
                 ray_x / w->chunks[0].scale, 
                 ray_y / w->chunks[0].scale);
     
+        if(ray_pos) {
+            ray_pos->x = ray_x;
+            ray_pos->y = ray_y;
+        }
+   
         if(cell && (cell->id == S_ID_SURFACE || cell->id == S_ID_FULL)) {
             // Use segment normal and ray direction
             // to know if the ray got stuck at starting position.
@@ -150,21 +157,23 @@ struct chunk_cell* raycast_world
                 return cell;
             }
         }
+      
         
-        /*DrawCircle(
+        // Visualize ray.
+        /*DrawRectangle(
                 ray_x,
                 ray_y,
-                2.0, PURPLE);*/
+                2, 2, PURPLE);*/
 
         numerator += shortest;
         if(numerator > longest) {
             numerator -= longest;    
-            ray_x += dx0 * 4;
-            ray_y += dy0 * 4;
+            ray_x += dx0 * WORLD_RAY_STEP_SIZE;
+            ray_y += dy0 * WORLD_RAY_STEP_SIZE;
         }
         else {
-            ray_x += dx1 * 4;
-            ray_y += dy1 * 4;
+            ray_x += dx1 * WORLD_RAY_STEP_SIZE;
+            ray_y += dy1 * WORLD_RAY_STEP_SIZE;
         }
     }
     
@@ -192,7 +201,7 @@ bool get_segment_intersection(Vector2 p, Vector2 direction, struct segment* s, V
 
 bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surface, Vector2* normal) {
     int max_raylen = 3;
-    struct chunk_cell* cell = raycast_world(w, from, direction, max_raylen);
+    struct chunk_cell* cell = raycast_world(w, from, direction, max_raylen, NULL);
     if(!cell) {
         return false;
     }
@@ -262,8 +271,10 @@ bool can_move_down(struct world* w, Vector2 center, float radius, Vector2* hit_n
 
 
 void spawn_item(struct world* w, Vector2 pos, enum item_type type) {
-    int chunk_x = pos.x / (CHUNK_SIZE * w->chunks[0].scale);
-    int chunk_y = pos.y / (CHUNK_SIZE * w->chunks[0].scale);
+    int chunk_x;
+    int chunk_y;
+    get_chunk_coords(pos, w->chunks[0].scale, &chunk_x, &chunk_y);
+    
 
     struct chunk* chunk = get_chunk(w, chunk_x, chunk_y);
     if(!chunk) {
@@ -272,7 +283,7 @@ void spawn_item(struct world* w, Vector2 pos, enum item_type type) {
     }
 
     if(chunk->num_items+1 >= CHUNK_ITEMS_MAX) {
-        errmsg("Cant spawn item %i to chunk(%i, %i). Its too full of items", type, chunk_x, chunk_y);
+        errmsg("Cant spawn item %i to chunk(%i, %i). Its too full.", type, chunk_x, chunk_y);
         return;
     }
 
@@ -284,6 +295,25 @@ void spawn_item(struct world* w, Vector2 pos, enum item_type type) {
     item->type = type;
     item->in_inventory = false;
 }
+
+
+/*
+static
+void init_world_entity(struct entity* entity, struct chunk* chunk, Vector2 pos) {
+
+    entity->pos = pos;
+    entity->vel = (Vector2){ 0, 0 };
+    entity->sprite = null_sprite();
+
+    entity->parent_chunk_x = chunk->col;
+    entity->parent_chunk_y = chunk->row;
+
+    entity->max_health = 100;
+    entity->health = entity->max_health;
+
+    entity->collision_radius = 10.0f;
+}
+
 
 void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
     
@@ -308,19 +338,93 @@ void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
     enemy->type = type;
 
     // TODO: Get these values from some kind of configuration.
+    // And move this away from here.
 
+    init_world_entity(&enemy->entity, chunk, pos);
 
-    enemy->entity.pos = pos;
-    enemy->entity.vel = (Vector2) { 0, 0 };
-    enemy->entity.world = w;
-    enemy->entity.sprite = null_sprite();
+    enemy->can_see_player = false;
+    enemy->spawn_event = true;
 
-    enemy->entity.max_health = 100;
-    enemy->entity.health = enemy->entity.max_health;
+    enemy->can_see_player_check_countdown = 0;
+    switch(type) {
+        case ENEMY_BAT:
+            entity_add_movement_mod(&enemy->entity, ENTMOVMOD_enemy_flying);
+            entity_add_movement_mod(&enemy->entity, ENTMOVMOD_enemy_vision);
+            break;
 
-    enemy->entity.collision_radius = 10.0f;
+        default:
+            errmsg("Enemy %i spawned but was not assigned any movement modifiers.", type);
+            break;
+    }
+}
+*/
+
+static
+void init_world_entity(struct entity* entity, struct chunk* chunk, Vector2 pos) {
+    entity->pos = pos;
+    entity->vel = (Vector2){ 0, 0 };
+    entity->sprite = null_sprite();
+    entity->world = chunk->world;
+
+    entity->parent_chunk_x = chunk->col;
+    entity->parent_chunk_y = chunk->row;
+
+    entity->max_health = 100;
+    entity->health = entity->max_health;
+
+    entity->num_movement_mods = 0;
+    entity->collision_radius = 10.0f;
 }
 
 
+static
+struct entity* spawn_entity(struct world* w, Vector2 pos, enum entity_type type) {
+    int chunk_x;
+    int chunk_y;
+    get_chunk_coords(pos, w->chunks[0].scale, &chunk_x, &chunk_y);
 
+    struct chunk* chunk = get_chunk(w, chunk_x, chunk_y);
+    if(!chunk) {
+        errmsg("Entity %i tried to spawn outside of world: %f, %f", type, pos.x, pos.y);
+        return NULL;
+    }
+
+    if(chunk->num_entities+1 >= CHUNK_ENTITIES_MAX) {
+        errmsg("Cant spawn entity %i to chunk(%i, %i). Its too full.", type, chunk_x, chunk_y);
+        return NULL;
+    }
+
+    struct entity* entity = &chunk->entities[chunk->num_entities];
+    entity->chunk_entity_index = chunk->num_entities;
+    chunk->num_entities++;
+
+    init_world_entity(entity, chunk, pos);
+    return entity;
+}
+
+
+void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) { 
+
+    struct entity* entity = spawn_entity(w, pos, ENTITY_ENEMY);
+    if(!entity) {
+        return;
+    }
+
+    entity->type = ENTITY_ENEMY;
+
+    switch(type) {
+
+        case ENEMY_BAT:
+            entity_add_movement_mod(entity, ENTMOVMOD_enemy_flying);
+            entity_add_movement_mod(entity, ENTMOVMOD_enemy_vision);
+            break;
+
+
+        default:
+            errmsg("Entity was spawned, but enemy type %i was not handled further.", type);
+            break;
+    }
+
+
+}
 

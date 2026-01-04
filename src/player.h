@@ -8,7 +8,7 @@
 #include "world/world.h"
 #include "psystem.h"
 #include "inventory.h"
-#include "entity.h"
+#include "entity/entity.h"
 
 
 
@@ -30,7 +30,7 @@ struct player {
     Vector2 surface;
     bool    got_surface;
 
-    bool moving;
+    bool moving; // TODO: Rename to "moving_by_user"
     bool was_moving;
     bool onground;
     int  jump_counter;

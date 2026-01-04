@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <raymath.h>
 #include <float.h>
+#include <string.h>
 
 #include "chunk.h"
 
@@ -109,15 +110,16 @@ const Vector2 cases_normals[16][2] = {
 };
 
 
-void load_chunk(struct worldgen_config* worldgencfg, struct chunk* chunk, int col, int row) { 
+void load_chunk(struct worldgen_config* worldgencfg, struct world* world, struct chunk* chunk, int col, int row) { 
 
     chunk->row = row;
     chunk->col = col;
     chunk->num_items = 0;
-    chunk->num_enemies = 0;
+    chunk->num_entities = 0;
     chunk->cells = calloc(CHUNK_SIZE * CHUNK_SIZE,
         sizeof *chunk->cells);
 
+    chunk->world = world;
 
 
     const float isolevel = 0.1f;
@@ -293,41 +295,144 @@ void render_cell_grass(struct gstate* gst, struct chunk_cell* cell) {
     }
 }
 
+/*
+static
+void update_world_entity(struct chunk* chunk, struct entity* entity) {
+    int entity_chunk_x = entity->pos.x / (CHUNK_SIZE * chunk->scale);
+    int entity_chunk_y = entity->pos.y / (CHUNK_SIZE * chunk->scale);
 
+    if(entity_chunk_x == entity->parent_chunk_x
+    && entity_chunk_y == entity->parent_chunk_y) {
+        return;
+    }
+
+
+
+}
 
 static
-void render_chunk_enemies(struct gstate* gst, struct chunk* chunk) {
+void update_chunk_enemies(struct gstate* gst, struct chunk* chunk) {
     for(uint32_t i = 0; i < chunk->num_enemies; i++) {
         struct enemy* enemy = &chunk->enemies[i];
 
+        //update_world_entity(chunk, &enemy->entity);
+ 
         update_enemy_animation(gst, enemy);
 
-        /*
-        if(enemy->entity.sprite.animptr == NULL) {
-            errmsg("Enemy %i doesnt have animation pointer set.", enemy->type);
-            continue;
-        }
-        */
-        
+      
+        enemy_update_movement_mods(gst, enemy);
 
         //update_sprite_animation(&enemy->entity.sprite, gst->frametime);
-        render_sprite(&enemy->entity.sprite, enemy->entity.pos);
+        //render_sprite(&enemy->entity.sprite, enemy->entity.pos);
     }
 }
+*/
 
+
+void remove_entity(struct chunk* chunk, uint32_t index) {
+    if(chunk->num_entities == 0) {
+        return;
+    }
+    
+    if(index >= chunk->num_entities) {
+        return;
+    }
+
+    if(index+1 >= chunk->num_entities) {
+        chunk->num_entities--;
+        return;
+    }
+
+    for(uint32_t i = index; i < chunk->num_entities-1; i++) {
+        chunk->entities[i] = chunk->entities[i+1];
+        if(chunk->entities[i].chunk_entity_index > 0) {
+            chunk->entities[i].chunk_entity_index--;
+        }
+    }
+    chunk->num_entities--;
+}
+
+
+
+// Move entity to correct chunk.
+static
+bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
+
+    int entity_chunk_x;
+    int entity_chunk_y; 
+    get_chunk_coords(entity->pos, chunk->scale, &entity_chunk_x, &entity_chunk_y);
+    
+    if(entity->parent_chunk_x == entity_chunk_x && entity->parent_chunk_y == entity_chunk_y) {
+        return false;
+    }
+
+    struct chunk* correct_chunk = get_chunk(chunk->world, entity_chunk_x, entity_chunk_y);
+    if(!correct_chunk) {
+        remove_entity(chunk, entity->chunk_entity_index);
+        errmsg("Entity moved to outside of world.");
+        return true;
+    }
+    
+    if(correct_chunk->num_entities+1 >= CHUNK_ENTITIES_MAX) {
+        errmsg("Entity moved chunks, but the destination chunk is full. (( FIXME ))");
+        remove_entity(chunk, entity->chunk_entity_index);
+        return true;
+    }
+
+    entity->parent_chunk_x = entity_chunk_x;
+    entity->parent_chunk_y = entity_chunk_y;
+
+
+    memcpy(&correct_chunk->entities[correct_chunk->num_entities],
+            entity,
+            sizeof *entity);
+
+    correct_chunk->num_entities++;
+    remove_entity(chunk, entity->chunk_entity_index);
+
+    return true;
+}
+
+static
+void render_chunk_entities(struct gstate* gst, struct chunk* chunk) {
+    for(int i = 0; i < (int)chunk->num_entities; i++) {
+        struct entity* entity = &chunk->entities[i];
+
+        if(correct_entity_parent_chunk(entity, chunk)) {
+            if(i > 0) {
+                i--;
+            }
+        }
+
+
+        entity_update_movement_mods(gst, entity);
+
+        update_entity_animation(gst, entity);
+        render_sprite(&entity->sprite, entity->pos);
+    }
+}
 
 void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
     /*
     DrawRectangleLines(
-                chunk->row * CHUNK_SIZE * chunk->scale,
                 chunk->col * CHUNK_SIZE * chunk->scale,
+                chunk->row * CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 BLUE);
     */
 
-    render_chunk_enemies(gst, chunk);
+
+    /*
+    DrawText(TextFormat("Entities: %i", chunk->num_entities),
+                chunk->col * CHUNK_SIZE * chunk->scale,
+                chunk->row * CHUNK_SIZE * chunk->scale,
+                20,
+                (Color){ 20, 150, 20, 200 }
+            );*/
+    
+    render_chunk_entities(gst, chunk);
 
     for(uint32_t i = 0; i < CHUNK_SIZE*CHUNK_SIZE; i++) {
         struct chunk_cell* cell = &chunk->cells[i];
@@ -384,8 +489,6 @@ void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row) {
 }
 
 
-
-
 struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p) {
  
     int pchunk_col;
@@ -402,43 +505,5 @@ struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p) {
     get_chunk_local_coords(p, chunk, &local_x, &local_y);
     return &chunk->cells[ local_y * CHUNK_SIZE + local_x ];
 }
-
-/*
-enum cell_slope get_cell_slope(struct chunk_cell* cell) {
-    if(!cell) {
-        return C_SLOPE_NONE;
-    }
-
-    Vector2* n = &cell->segment.normal;
-
-    if(cell->id == S_ID_FULL) {
-        return C_SLOPE_FULL_CELL;
-    }
-
-    if(NORMAL_UP(n->y) && !NORMAL_LEFT(n->x) && !NORMAL_RIGHT(n->x)) {
-        return C_SLOPE_FLAT;
-    }
-    if(NORMAL_DOWN(n->y) && !NORMAL_LEFT(n->x) && !NORMAL_RIGHT(n->x)) {
-        return C_SLOPE_CEILING;
-    }
-    if(NORMAL_UP(n->y) && NORMAL_LEFT(n->x)) {
-        return C_SLOPE_LEFT;
-    } 
-    if(NORMAL_UP(n->y) && NORMAL_RIGHT(n->x)) {
-        return C_SLOPE_RIGHT;
-    }
-    if(NORMAL_DOWN(n->y) && NORMAL_LEFT(n->x)) {
-        return C_SLOPE_CEILING_LEFT;
-    } 
-    if(NORMAL_DOWN(n->y) && NORMAL_RIGHT(n->x)) {
-        return C_SLOPE_CEILING_RIGHT;
-    }
-    if(!NORMAL_DOWN(n->y) && !NORMAL_UP(n->y)) {
-        return C_SLOPE_VERTICAL;
-    }
-
-    return C_SLOPE_NONE;
-}*/
-
 
 

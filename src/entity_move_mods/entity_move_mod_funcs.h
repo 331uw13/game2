@@ -15,13 +15,13 @@
 #include <raylib.h>
 
 
-struct world;
+struct entity;
+struct gstate;
 
+typedef void(entity_move_mod_fn_t)(struct gstate* gst, struct entity*);
 
-
-void ENTMOVMOD_flying(struct world* world, Vector2* pos, float collision_radius);
-
-
+void ENTMOVMOD_enemy_flying(struct gstate* gst, struct entity* entity);
+void ENTMOVMOD_enemy_vision(struct gstate* gst, struct entity* entity);
 
 
 

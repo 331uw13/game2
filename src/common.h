@@ -12,6 +12,7 @@
 
 void draw_texture(Texture tex, Vector2 pos, Vector2 center_offset, float rotation, float scale, Color tint);
 
+Vector2 random_normal();
 
 
 #endif

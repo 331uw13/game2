@@ -92,7 +92,8 @@ struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
 
     InitWindow(1200, 800, "game2");
-   
+
+    /*
     ToggleBorderlessWindowed();
     int monitor = GetCurrentMonitor();
     int mon_width = GetMonitorWidth(monitor);
@@ -101,6 +102,7 @@ struct gstate* gstate_init() {
     Vector2 monitor_pos = GetMonitorPosition(monitor);
     SetWindowPosition(monitor_pos.x, monitor_pos.y);
     SetWindowSize(mon_width, mon_height);
+    */
 
     SetTargetFPS(TARGET_FPS);
 

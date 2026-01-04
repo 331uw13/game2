@@ -21,7 +21,7 @@ enum pmod_context {
 
 
 typedef void (particle_mod_fn)(
-    enum pmod_context context,
+    enum pmod_context,
     struct gstate*,
     struct ps_emitter*,
     struct particle*

@@ -6,11 +6,10 @@
 #include <raylib.h>
 
 #include "../item.h"
-#include "../enemy.h"
+#include "../entity/entity.h"
 
 
 #define CHUNK_SIZE 64
-
 
 #define NORMAL_DOWN(y) (y >  0.001f)
 #define NORMAL_UP(y)   (y < -0.001f)
@@ -21,7 +20,7 @@
 
 
 #define CHUNK_ITEMS_MAX 64    // TODO: Items should never get discarded if they cant spawn because of this limit!
-#define CHUNK_ENEMIES_MAX 48
+#define CHUNK_ENTITIES_MAX 48
 
 
 struct gstate;
@@ -58,19 +57,20 @@ struct chunk_cell {
 };
 
 struct chunk {
-
+    struct world*      world;
     struct chunk_cell* cells;
     uint32_t           num_cells;
 
     struct item  items [CHUNK_ITEMS_MAX];
     uint32_t     num_items;
 
-    struct enemy enemies [CHUNK_ENEMIES_MAX];
-    uint32_t     num_enemies;
+    struct entity entities [CHUNK_ENTITIES_MAX];
+    uint32_t      num_entities;
 
 
-    int col;
-    int row;
+    int col; // TODO: Rename.
+    int row; // TODO: Rename.
+
     float scale;
 };
 
@@ -83,13 +83,16 @@ struct worldgen_config {
 };
 
 
-void load_chunk(struct worldgen_config* worldgencfg, struct chunk* chunk, int col, int row);
+void load_chunk(struct worldgen_config* worldgencfg, struct world* world, struct chunk* chunk, int col, int row);
 void free_chunk(struct chunk* chunk);
 void render_chunk(struct gstate* gst, struct chunk* chunk);
 struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p);
 
 void get_chunk_local_coords(Vector2 p, struct chunk* chunk, int* col, int* row);
 void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row);
+
+
+void remove_entity(struct chunk* chunk, uint32_t index);
 
 //enum cell_slope get_cell_slope(struct chunk_cell* cell);
 

@@ -28,6 +28,10 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->pickedup_item = NULL;
 
 
+    pl->entity.type = ENTITY_PLAYER;
+    pl->entity.collision_radius = 10.0f;
+
+
     pl->spell_psys = new_psystem(world, "player_spell_psystem");
     pl->spell_emitter = add_particle_emitter(pl->spell_psys, 2000, (Rectangle){ 0, 0, 20, 20 });
 
@@ -130,7 +134,7 @@ void update_position(struct player* pl, float frametime) {
     pl->entity.vel.y += 10.0f * (frametime * 60.0f);
 
 
-    float radius = 10.0f;
+    float radius = pl->entity.collision_radius;
     Vector2 center = (Vector2){
         pl->entity.pos.x,
         pl->entity.pos.y
@@ -142,7 +146,7 @@ void update_position(struct player* pl, float frametime) {
         return;
     }
 
-    DrawCircleLines(center.x, center.y, radius, RED);
+    //DrawCircleLines(center.x, center.y, radius, RED);
 
 
     pl->got_surface = get_surface(pl->entity.world, center, NV_DOWN, &pl->surface, NULL);

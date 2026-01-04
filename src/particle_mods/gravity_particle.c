@@ -48,7 +48,7 @@ void gravity_particle_death(PARTICLE_MOD_FUNC_ARGS) {
 
 void gravity_particle_spawn(PARTICLE_MOD_FUNC_ARGS) { 
     float color_t = drand48();
-    part->color = ColorLerp((Color){ 125, 40, 80 }, PINK, color_t * color_t);
+    part->color = ColorLerp((Color){ 125, 40, 80, 255 }, PINK, color_t * color_t);
     part->lifetime += drand48() * 10.0f;
 }
 
