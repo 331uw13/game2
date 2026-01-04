@@ -49,5 +49,7 @@ bool can_move_left(struct world* w, Vector2 center, float radius, Vector2* hit_n
 bool can_move_right(struct world* w, Vector2 center, float radius, Vector2* hit_normal);
 
 void spawn_item(struct world* w, Vector2 pos, enum item_type type);
+void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type);
+
 
 #endif

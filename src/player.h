@@ -8,14 +8,22 @@
 #include "world/world.h"
 #include "psystem.h"
 #include "inventory.h"
+#include "entity.h"
+
 
 
 struct player {
     Camera2D cam;
+
+    struct entity entity;
+    Vector2 want_pos;
+
+    /*
     Vector2 pos;
     Vector2 want_pos;
     Vector2 old_pos;
     Vector2 vel;
+    */
     /*Vector2 feet_pos;
     Vector2 head_pos;
     Vector2 body_pos;*/
@@ -48,8 +56,8 @@ struct player {
     struct psystem*    spell_psys;
     struct ps_emitter* spell_emitter;
 
-    struct sprite sprite;
-    struct world* world;
+    //struct sprite sprite;
+    //struct world* world;
 };
 
 

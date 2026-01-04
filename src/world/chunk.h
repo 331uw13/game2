@@ -6,6 +6,8 @@
 #include <raylib.h>
 
 #include "../item.h"
+#include "../enemy.h"
+
 
 #define CHUNK_SIZE 64
 
@@ -18,9 +20,11 @@
 #define INF_DISTANCE -9999999999.9f
 
 
-// TODO: Items should never get discarded if they cant spawn!
-#define CHUNK_ITEMS_MAX 64
+#define CHUNK_ITEMS_MAX 64    // TODO: Items should never get discarded if they cant spawn because of this limit!
+#define CHUNK_ENEMIES_MAX 48
 
+
+struct gstate;
 
 
 enum chunk_cell_id {
@@ -61,25 +65,16 @@ struct chunk {
     struct item  items [CHUNK_ITEMS_MAX];
     uint32_t     num_items;
 
+    struct enemy enemies [CHUNK_ENEMIES_MAX];
+    uint32_t     num_enemies;
+
+
     int col;
     int row;
     float scale;
 };
 
 
-/*enum cell_slope {
-    C_SLOPE_NONE,
-    C_SLOPE_FLAT,
-    C_SLOPE_RIGHT,
-    C_SLOPE_LEFT,
-    C_SLOPE_VERTICAL,
-    C_SLOPE_CEILING,
-    C_SLOPE_CEILING_LEFT,
-    C_SLOPE_CEILING_RIGHT,
-    C_SLOPE_FULL_CELL
-};*/
-
-struct gstate;
 
 
 struct worldgen_config {

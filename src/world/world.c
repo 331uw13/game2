@@ -271,8 +271,8 @@ void spawn_item(struct world* w, Vector2 pos, enum item_type type) {
         return;
     }
 
-    if(chunk->num_items >= CHUNK_ITEMS_MAX) {
-        errmsg("Chunk is full of items.. TODO: Items should never get discarded if they cant spawn right away.");
+    if(chunk->num_items+1 >= CHUNK_ITEMS_MAX) {
+        errmsg("Cant spawn item %i to chunk(%i, %i). Its too full of items", type, chunk_x, chunk_y);
         return;
     }
 
@@ -284,6 +284,43 @@ void spawn_item(struct world* w, Vector2 pos, enum item_type type) {
     item->type = type;
     item->in_inventory = false;
 }
+
+void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
+    
+    int chunk_x = pos.x / (CHUNK_SIZE * w->chunks[0].scale);
+    int chunk_y = pos.y / (CHUNK_SIZE * w->chunks[0].scale);
+
+    struct chunk* chunk = get_chunk(w, chunk_x, chunk_y);
+    if(!chunk) {
+        errmsg("Enemy %i tried to spawn outside of world: %f, %f", type, pos.x, pos.y);
+        return;
+    }
+
+    if(chunk->num_enemies+1 >= CHUNK_ENEMIES_MAX) {
+        errmsg("Cant spawn enemy %i to chunk(%i, %i). Its too full of enemies", type, chunk_x, chunk_y);
+        return;
+    }
+
+    struct enemy* enemy = &chunk->enemies[chunk->num_enemies];
+    chunk->num_enemies++;
+
+
+    enemy->type = type;
+
+    // TODO: Get these values from some kind of configuration.
+
+
+    enemy->entity.pos = pos;
+    enemy->entity.vel = (Vector2) { 0, 0 };
+    enemy->entity.world = w;
+    enemy->entity.sprite = null_sprite();
+
+    enemy->entity.max_health = 100;
+    enemy->entity.health = enemy->entity.max_health;
+
+    enemy->entity.collision_radius = 10.0f;
+}
+
 
 
 

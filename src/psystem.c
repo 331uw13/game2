@@ -1,11 +1,14 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+
+
 #include "psystem.h"
+#include "state.h"
 #include "errmsg.h"
 #include "memory.h"
 
-#include <stdio.h>
+
 
 struct psystem* new_psystem(struct world* world, const char* name) {
     struct psystem* ps = malloc(sizeof *ps);
@@ -138,11 +141,11 @@ void add_particle_mod(struct psystem* ps, particle_mod_fn* mod) {
 
 void update_psystem(struct gstate* gst, struct psystem* ps) {
     
-    float left_edge  = gst->player.pos.x - gst->screen_width / 2;
-    float right_edge = gst->player.pos.x + gst->screen_width / 2;
+    float left_edge  = gst->player.entity.pos.x - gst->screen_width / 2;
+    float right_edge = gst->player.entity.pos.x + gst->screen_width / 2;
     
-    float top_edge    = gst->player.pos.y - gst->screen_height / 2;
-    float bottom_edge = gst->player.pos.y + gst->screen_height / 2;
+    float top_edge    = gst->player.entity.pos.y - gst->screen_height / 2;
+    float bottom_edge = gst->player.entity.pos.y + gst->screen_height / 2;
 
 
 

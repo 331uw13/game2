@@ -4,8 +4,9 @@
 
 #include <stdlib.h>
 
-#include "functions.h"
+#include "particle_mod_funcs.h"
 #include "../perlin_noise.h"
+#include "../state.h"
 
 
 

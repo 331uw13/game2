@@ -4,12 +4,15 @@
 #include <stdint.h>
 #include <raylib.h>
 
-#include "particle_mods/functions.h"
-#include "particle_mods.h"
-#include "world/world.h"
+#include "particle_mods/particle_mods.h"
+#include "particle_mods/particle_mod_funcs.h"
 
 #define PSYSTEM_EMITTERS_MAX 32
 #define PSYSTEM_PARTICLE_MODS_MAX 32
+
+
+struct gstate;
+struct world;
 
 
 struct particle {

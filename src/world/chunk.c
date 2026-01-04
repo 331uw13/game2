@@ -13,6 +13,7 @@
 #include "../memory.h"
 #include "../common.h"
 #include "../state.h"
+#include "../errmsg.h"
 
 #include <stdio.h>
 
@@ -113,6 +114,7 @@ void load_chunk(struct worldgen_config* worldgencfg, struct chunk* chunk, int co
     chunk->row = row;
     chunk->col = col;
     chunk->num_items = 0;
+    chunk->num_enemies = 0;
     chunk->cells = calloc(CHUNK_SIZE * CHUNK_SIZE,
         sizeof *chunk->cells);
 
@@ -222,7 +224,7 @@ void render_chunk_items(struct gstate* gst, struct chunk* chunk) {
             item->pos.y - item_tex->height / (circle_radius / 2)
         };
       
-        if(Vector2Distance(circle_center, gst->player.pos) < 40.0f) {
+        if(Vector2Distance(circle_center, gst->player.entity.pos) < 40.0f) {
         if(Vector2Distance(circle_center, gst->world_mouse_pos) <= circle_radius) {
             //render_item_info(gst, item);
           
@@ -292,6 +294,28 @@ void render_cell_grass(struct gstate* gst, struct chunk_cell* cell) {
 }
 
 
+
+static
+void render_chunk_enemies(struct gstate* gst, struct chunk* chunk) {
+    for(uint32_t i = 0; i < chunk->num_enemies; i++) {
+        struct enemy* enemy = &chunk->enemies[i];
+
+        update_enemy_animation(gst, enemy);
+
+        /*
+        if(enemy->entity.sprite.animptr == NULL) {
+            errmsg("Enemy %i doesnt have animation pointer set.", enemy->type);
+            continue;
+        }
+        */
+        
+
+        //update_sprite_animation(&enemy->entity.sprite, gst->frametime);
+        render_sprite(&enemy->entity.sprite, enemy->entity.pos);
+    }
+}
+
+
 void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
     /*
@@ -302,6 +326,9 @@ void render_chunk(struct gstate* gst, struct chunk* chunk) {
                 CHUNK_SIZE * chunk->scale,
                 BLUE);
     */
+
+    render_chunk_enemies(gst, chunk);
+
     for(uint32_t i = 0; i < CHUNK_SIZE*CHUNK_SIZE; i++) {
         struct chunk_cell* cell = &chunk->cells[i];
 

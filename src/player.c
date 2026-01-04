@@ -14,16 +14,16 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
 
     pl->cam.rotation = 0.0f;
     pl->cam.zoom = 1.0f;
-    pl->pos = spawn_pos;
-    pl->want_pos = pl->pos;
+    pl->entity.pos = spawn_pos;
+    pl->want_pos = pl->entity.pos;
     pl->moving = false;
-    pl->world = NULL;
+    pl->entity.world = NULL;
     pl->jump_counter = 0;
     pl->attack_timer = 0.0f;
     pl->attack_delay = 0.01f;
     pl->onground = false;
     pl->spell_force = 0.0f;
-    pl->world = world;
+    pl->entity.world = world;
     pl->using_inventory = false;
     pl->pickedup_item = NULL;
 
@@ -35,8 +35,8 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->inventory->pos = (Vector2){ 10,  10 };
 
 
-    pl->sprite = null_sprite();
-    sprite_set_animation(&pl->sprite, &gst->animations[ANIM_PLAYER_IDLE]);
+    pl->entity.sprite = null_sprite();
+    sprite_set_animation(&pl->entity.sprite, &gst->animations[ANIM_PLAYER_IDLE]);
 
     //add_particle_mod(pl->spell_psys, PMOD_fire_particle);
     
@@ -53,7 +53,7 @@ void free_player(struct player* pl) {
 static
 void get_movement_input(struct player* pl, float frametime) {
     float speed = 500;
-    pl->want_pos = pl->pos;
+    pl->want_pos = pl->entity.pos;
 
     if(IsKeyDown(KEY_LEFT_CONTROL)) {
         speed *= 2;
@@ -63,14 +63,16 @@ void get_movement_input(struct player* pl, float frametime) {
         speed *= 0.5;
     }
 
-    Vector2 old_vel = pl->vel;
+    Vector2 old_vel = pl->entity.vel;
 
     if(IsKeyDown(KEY_A)) {
-        pl->vel.x -= frametime * speed;
+        pl->entity.vel.x -= frametime * speed;
+        pl->entity.sprite.flags |= SPRITE_FLIP_HORIZONTAL;
     }
     else
     if(IsKeyDown(KEY_D)) {
-        pl->vel.x += frametime * speed;
+        pl->entity.vel.x += frametime * speed;
+        pl->entity.sprite.flags &= ~SPRITE_FLIP_HORIZONTAL;
     }
     
     if(IsKeyPressed(KEY_SPACE)) {
@@ -79,11 +81,11 @@ void get_movement_input(struct player* pl, float frametime) {
     
 
     pl->was_moving = pl->moving;
-    pl->moving = (Vector2Distance(old_vel, pl->vel) > 0.1f);
+    pl->moving = (Vector2Distance(old_vel, pl->entity.vel) > 0.1f);
 }
 
 void player_jump(struct player* pl) {
-    pl->vel.y = -200.0;
+    pl->entity.vel.y = -200.0;
     pl->jump_counter++;
     pl->jumped = true;
 }
@@ -94,69 +96,69 @@ void player_jump(struct player* pl) {
 static
 void set_player_onground(struct player* pl) {
     if(pl->got_surface) {
-        pl->pos.y = pl->surface.y;
-        //pl->pos.y = pl->surface.y - pl->sprite.height / 2;
+        pl->entity.pos.y = pl->surface.y;
+        //pl->entity.pos.y = pl->surface.y - pl->entity.sprite.height / 2;
     }
 }*/
 
 
 static
 void update_position(struct player* pl, float frametime) {
-    /*pl->head_pos.x = pl->pos.x + pl->sprite.width / 2;
-    pl->head_pos.y = pl->pos.y + 10;
+    /*pl->head_pos.x = pl->entity.pos.x + pl->entity.sprite.width / 2;
+    pl->head_pos.y = pl->entity.pos.y + 10;
     
-    pl->body_pos.x = pl->pos.x + pl->sprite.width / 2;
-    pl->body_pos.y = pl->pos.y + pl->sprite.height / 2 + 5;
+    pl->body_pos.x = pl->entity.pos.x + pl->entity.sprite.width / 2;
+    pl->body_pos.y = pl->entity.pos.y + pl->entity.sprite.height / 2 + 5;
     
-    pl->feet_pos.x = pl->pos.x + pl->sprite.width / 2;
-    pl->feet_pos.y = pl->pos.y + pl->sprite.height - 8;
+    pl->feet_pos.x = pl->entity.pos.x + pl->entity.sprite.width / 2;
+    pl->feet_pos.y = pl->entity.pos.y + pl->entity.sprite.height - 8;
     */
 
 
-    const float chunk_scale = pl->world->chunks[0].scale;
+    const float chunk_scale = pl->entity.world->chunks[0].scale;
    
 
 
-    pl->want_pos.x += pl->vel.x * frametime;
-    pl->want_pos.y += pl->vel.y * frametime;
+    pl->want_pos.x += pl->entity.vel.x * frametime;
+    pl->want_pos.y += pl->entity.vel.y * frametime;
 
     
     float friction = pow(1.0f - 0.00885f, 500.0f * frametime);
-    pl->vel.x *= friction;
+    pl->entity.vel.x *= friction;
    
     // Gravity.
-    pl->vel.y += 10.0f * (frametime * 60.0f);
+    pl->entity.vel.y += 10.0f * (frametime * 60.0f);
 
 
     float radius = 10.0f;
     Vector2 center = (Vector2){
-        pl->pos.x,
-        pl->pos.y
+        pl->entity.pos.x,
+        pl->entity.pos.y
     };
 
 
     if(IsKeyDown(KEY_LEFT_ALT)) {
-        pl->pos = pl->want_pos;
+        pl->entity.pos = pl->want_pos;
         return;
     }
 
     DrawCircleLines(center.x, center.y, radius, RED);
 
 
-    pl->got_surface = get_surface(pl->world, center, NV_DOWN, &pl->surface, NULL);
+    pl->got_surface = get_surface(pl->entity.world, center, NV_DOWN, &pl->surface, NULL);
 
 
     // Terrain collision checking.
 
-    bool allow_move_up     = can_move_up(pl->world, center, radius, NULL);
-    bool allow_move_down   = can_move_down(pl->world, center, radius, NULL);
-    bool allow_move_left   = can_move_left(pl->world, center, radius, NULL);
-    bool allow_move_right  = can_move_right(pl->world, center, radius, NULL);
+    bool allow_move_up     = can_move_up(pl->entity.world, center, radius, NULL);
+    bool allow_move_down   = can_move_down(pl->entity.world, center, radius, NULL);
+    bool allow_move_left   = can_move_left(pl->entity.world, center, radius, NULL);
+    bool allow_move_right  = can_move_right(pl->entity.world, center, radius, NULL);
 
-    bool want_move_left  = (pl->want_pos.x < pl->pos.x);
-    bool want_move_right = (pl->want_pos.x > pl->pos.x);
-    bool want_move_down  = (pl->want_pos.y > pl->pos.y);
-    bool want_move_up    = (pl->want_pos.y < pl->pos.y);
+    bool want_move_left  = (pl->want_pos.x < pl->entity.pos.x);
+    bool want_move_right = (pl->want_pos.x > pl->entity.pos.x);
+    bool want_move_down  = (pl->want_pos.y > pl->entity.pos.y);
+    bool want_move_up    = (pl->want_pos.y < pl->entity.pos.y);
 
 
 
@@ -164,13 +166,13 @@ void update_position(struct player* pl, float frametime) {
     // Handle Left movement.
 
     if(want_move_left && allow_move_left) {
-        pl->pos.x = pl->want_pos.x;
+        pl->entity.pos.x = pl->want_pos.x;
     }
 
     // Handle Right movement.
 
     if(want_move_right && allow_move_right) {
-        pl->pos.x = pl->want_pos.x;
+        pl->entity.pos.x = pl->want_pos.x;
     }
    
  
@@ -178,23 +180,23 @@ void update_position(struct player* pl, float frametime) {
     // Handle Up movement.
 
     if(want_move_up && allow_move_up) {
-        pl->pos.y = pl->want_pos.y;
+        pl->entity.pos.y = pl->want_pos.y;
     }
     else
     if(!allow_move_up) {
-        pl->vel.y = 0.0f;
-        pl->pos.y += 1.0f;
+        pl->entity.vel.y = 0.0f;
+        pl->entity.pos.y += 1.0f;
     }
 
     // Handle Down movement.
 
     if(want_move_down && allow_move_down) {
-        pl->pos.y = pl->want_pos.y;
+        pl->entity.pos.y = pl->want_pos.y;
     }
 
 
     if(pl->got_surface) {
-        pl->onground = (pl->pos.y + radius > pl->surface.y - 1.0f);
+        pl->onground = (pl->entity.pos.y + radius > pl->surface.y - 1.0f);
     }
     else {
         pl->onground = false;
@@ -202,8 +204,8 @@ void update_position(struct player* pl, float frametime) {
 
     if(pl->onground && !pl->jumped && want_move_down) {
         pl->jump_counter = 0;
-        pl->vel.y = 0;
-        pl->pos.y = (pl->surface.y - radius) - 0.1f;
+        pl->entity.vel.y = 0;
+        pl->entity.pos.y = (pl->surface.y - radius) - 0.1f;
     }
     
     if(!pl->onground) {
@@ -241,14 +243,14 @@ void update_attacking(struct gstate* gst, struct player* pl) {
         pl->spell_emitter->cfg.initial_velocity 
             = Vector2Scale(pl->spell_direction, 7.0f);
         
-        pl->spell_emitter->cfg.spawn_rect.x = pl->pos.x + pl->spell_direction.x * 30;
-        pl->spell_emitter->cfg.spawn_rect.y = pl->pos.y + pl->spell_direction.y * 30;
+        pl->spell_emitter->cfg.spawn_rect.x = pl->entity.pos.x + pl->spell_direction.x * 30;
+        pl->spell_emitter->cfg.spawn_rect.y = pl->entity.pos.y + pl->spell_direction.y * 30;
         pl->spell_emitter->cfg.spawn_rect.width = 8;
         pl->spell_emitter->cfg.spawn_rect.height = 8;
 
 
-        pl->vel.x -= pl->spell_direction.x * pl->spell_force;
-        pl->vel.y -= pl->spell_direction.y * pl->spell_force;
+        pl->entity.vel.x -= pl->spell_direction.x * pl->spell_force;
+        pl->entity.vel.y -= pl->spell_direction.y * pl->spell_force;
 
         add_particles(gst, pl->spell_psys, 10);
     }
@@ -330,7 +332,7 @@ void update_inventory_control(struct gstate* gst, struct player* pl) {
         }
         else {
             // Nothing was selected drop item.
-            spawn_item(pl->world, pl->pos, *storage_slot);
+            spawn_item(pl->entity.world, pl->entity.pos, *storage_slot);
             *storage_slot = ITEM_NONE;
         }
     }
@@ -348,27 +350,19 @@ void update_player(struct gstate* gst, struct player* pl) {
 
     update_position(pl, gst->frametime);
     update_attacking(gst, pl);
-    update_sprite_animation(&pl->sprite, gst->frametime);
+    update_sprite_animation(&pl->entity.sprite, gst->frametime);
 
     update_psystem(gst, pl->spell_psys);
     
 
-    if(pl->vel.x < -0.001f) {
-        pl->sprite.flags |= SPRITE_FLIP_HORIZONTAL;
-    }
-    else
-    if(pl->vel.x > 0.001f) {
-        pl->sprite.flags &= ~SPRITE_FLIP_HORIZONTAL;
-    }
-
     if(pl->moving && !pl->was_moving) {
         // Started moving.
-        sprite_set_animation(&pl->sprite, &gst->animations[ANIM_PLAYER_WALK]);
+        sprite_set_animation(&pl->entity.sprite, &gst->animations[ANIM_PLAYER_WALK]);
     }
     else
     if(!pl->moving && pl->was_moving) {
         // Stopped moving.
-        sprite_set_animation(&pl->sprite, &gst->animations[ANIM_PLAYER_IDLE]);
+        sprite_set_animation(&pl->entity.sprite, &gst->animations[ANIM_PLAYER_IDLE]);
     }
 }
 
@@ -392,7 +386,7 @@ void render_pickedup_item(struct gstate* gst, struct player* pl) {
 
 void render_player(struct gstate* gst, struct player* pl) {
 
-    render_sprite(&pl->sprite, (Vector2) { pl->pos.x, pl->pos.y - 6.0f });
+    render_sprite(&pl->entity.sprite, (Vector2) { pl->entity.pos.x, pl->entity.pos.y - 6.0f });
     render_inventory(gst, pl->inventory);
     
     render_psystem(gst, pl->spell_psys);
@@ -400,7 +394,7 @@ void render_player(struct gstate* gst, struct player* pl) {
 
     if(pl->attack_button_down && !pl->using_inventory && pl->spell_psys->num_particle_mods > 1) {
 
-        Vector2 wand_pos = pl->pos;
+        Vector2 wand_pos = pl->entity.pos;
         Vector2 wand_offset = (Vector2){ 6, 13 };
 
         float angle = atan2(pl->spell_direction.y, pl->spell_direction.x) * RAD2DEG;

@@ -2,6 +2,10 @@
 #define PARTICLE_MODIFIERS_H
 
 
+// Some helping definitions for particle modifiers
+// so this dont need to be copy pasted manualy
+// everytime new particle mod is created.
+
 
 struct gstate;
 struct psystem;
@@ -29,10 +33,6 @@ typedef void (particle_mod_fn)(
     struct gstate* gst,\
     struct ps_emitter* emitter,\
     struct particle* part
-
-
-
-
 
 
 

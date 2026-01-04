@@ -60,6 +60,7 @@ void load_animations(struct gstate* gst) {
 
 }
 
+
 const char* item_rarity_to_str(enum item_rarity rarity) {
     switch(rarity) {
         case COMMON_ITEM: return "Common";
@@ -77,7 +78,7 @@ void spawn_starting_spells(struct gstate* gst, Vector2 pos) {
 
     for(int n = 0; n < 3; n++) {
         for(uint32_t i = 0; i < ITEM_TYPES_COUNT; i++) {
-            spawn_item(gst->player.world, pos, i);
+            spawn_item(gst->player.entity.world, pos, i);
         
             pos.x += 32;
         }
@@ -130,8 +131,8 @@ struct gstate* gstate_init() {
 
     load_world(&gst->world, 4, 4);
     
-    //create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
-    create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
+    create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
+    //create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
 
 
 
@@ -145,7 +146,7 @@ struct gstate* gstate_init() {
     // Spawn first spell options.
     // TODO: Add more and balance these better.
 
-    spawn_starting_spells(gst, gst->player.pos);
+    spawn_starting_spells(gst, gst->player.entity.pos);
 
 
     return gst;
@@ -209,17 +210,13 @@ void gstate_rungame(struct gstate* gst) {
         BeginTextureMode(gst->render_target);
         ClearBackground(BLACK);
         BeginMode2D(gst->player.cam);
-       
+    
 
 
-        /*
-        if(IsKeyDown(KEY_T)) {
-            add_particles(gst, test_psys, 1);
+
+        if(IsKeyPressed(KEY_T)) {
+            spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_BAT);
         }
-        */
-        //update_psystem(gst, test_psys);
-
-        //render_psystem(test_psys);
 
 
         update_player(gst, &gst->player);
@@ -232,8 +229,8 @@ void gstate_rungame(struct gstate* gst) {
         */
         gst->player.cam.offset.x = gst->screen_width / 2;
         gst->player.cam.offset.y = gst->screen_height / 2;
-        gst->player.cam.target.x = gst->player.pos.x;
-        gst->player.cam.target.y = gst->player.pos.y;
+        gst->player.cam.target.x = gst->player.entity.pos.x;
+        gst->player.cam.target.y = gst->player.entity.pos.y;
 
 
        
@@ -327,8 +324,8 @@ void gstate_rungame(struct gstate* gst) {
         EndShaderMode();
         DrawFPS(5, GetScreenHeight()-25);
         DrawText(TextFormat("X: %i, Y: %i onground: %s | jumps: %i | moving: %s",
-                    (int)gst->player.pos.x,
-                    (int)gst->player.pos.y,
+                    (int)gst->player.entity.pos.x,
+                    (int)gst->player.entity.pos.y,
                     gst->player.onground ? "yes" : "no",
                     gst->player.jump_counter,
                     gst->player.moving ? "yes" : "no"
@@ -366,8 +363,8 @@ Vector2 get_world_coords(struct gstate* gst, Vector2 screen_pos) {
     screen_pos.y /= RESOLUTION_DIV;
     screen_pos.x -= gst->screen_width / 2;
     screen_pos.y -= gst->screen_height / 2;
-    screen_pos.x += gst->player.pos.x;
-    screen_pos.y += gst->player.pos.y;
+    screen_pos.x += gst->player.entity.pos.x;
+    screen_pos.y += gst->player.entity.pos.y;
 
     return screen_pos;
 }

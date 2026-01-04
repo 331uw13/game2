@@ -4,10 +4,11 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include "functions.h"
+
+#include "particle_mod_funcs.h"
 #include "../perlin_noise.h"
 #include "../common.h"
-
+#include "../state.h"
 
 
 float fract(float x) {
@@ -134,13 +135,12 @@ void PMOD_plasma_particle(PARTICLE_MOD_FUNC_ARGS) {
         case PMODCTX_PARTICLE_SPAWN:
             plasma_particle_spawn(context, gst, emitter, part);
             break;
-        
+    
         case PMODCTX_PARTICLE_DEATH:
             plasma_particle_death(context, gst, emitter, part);
             break;
     }
 }
-
 
 
 

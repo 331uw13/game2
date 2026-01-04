@@ -4,9 +4,10 @@
 
 #include <stdlib.h>
 
-#include "functions.h"
+#include "particle_mod_funcs.h"
 #include "../perlin_noise.h"
 #include "../common.h"
+#include "../state.h"
 
 
 void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {

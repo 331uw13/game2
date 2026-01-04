@@ -2,7 +2,6 @@
 
 + Multiply particle on any hit
 + Multiply particle on enemy hit
-+ Gravitational particles (gravity point = mouse)
 
 
 
