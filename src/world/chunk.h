@@ -20,8 +20,7 @@
 
 
 #define CHUNK_ITEMS_MAX 64    // TODO: Items should never get discarded if they cant spawn because of this limit!
-#define CHUNK_ENTITIES_MAX 48
-
+#define CHUNK_ENTITIES_MAX 128
 
 struct gstate;
 

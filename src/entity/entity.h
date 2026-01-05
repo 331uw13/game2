@@ -47,6 +47,10 @@ struct entity {
 
     enum entity_type type;
 
+    // Set to 'true' for first modifier update when entity spawns.
+    // So that first entity move modifier can set the initial velocity if needed.
+    bool spawn_event;
+
     union {
 
         struct enemy enemy;
@@ -61,5 +65,7 @@ void entity_update_movement_mods(struct gstate* gst, struct entity* entity);
 
 
 void update_entity_animation(struct gstate* gst, struct entity* entity);
+void damage_entity(struct entity* entity, int damage);
+
 
 #endif

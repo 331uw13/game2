@@ -35,3 +35,8 @@ Vector2 random_normal() {
                 drand48() * 2.0f - 1.0f
             });
 }
+
+
+float map_fvalue(float t, float src_min, float src_max, float dst_min, float dst_max) {
+    return (t - src_min) * (dst_max - dst_min) / (src_max - src_min) + dst_min;
+}

@@ -20,6 +20,7 @@ void entity_add_movement_mod(struct entity* entity, entity_move_mod_fn_t* mod) {
 void entity_update_movement_mods(struct gstate* gst, struct entity* entity) {
     for(uint32_t i = 0; i < entity->num_movement_mods; i++) {
         entity->movement_mods[i](gst, (void*)entity);
+        entity->spawn_event = false;
     }
 }
 
@@ -48,3 +49,12 @@ void update_entity_animation(struct gstate* gst, struct entity* entity) {
 
     update_sprite_animation(&entity->sprite, gst->frametime);
 }
+
+
+void damage_entity(struct entity* entity, int damage) {
+    entity->health -= damage;
+    entity->sprite.blink_timer = 0.3f;
+}
+
+
+

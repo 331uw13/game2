@@ -8,9 +8,29 @@ in vec3 frag_position;
 uniform float time;
 uniform sampler2D texture_result;
 uniform sampler2D texture_bloom;
+uniform sampler2D texture_gui;
+uniform sampler2D texture_bloom_gui;
+
+uniform vec2 resolution;
 
 out vec4 out_color;
 
+
+
+vec4 add_scanlines(vec4 current) {
+    float line = 0.5+0.5*sin(frag_position.y * 1.4f + time * 2);
+    line = line * 0.5f + 0.8f;
+    return vec4(current.rgb * line, current.a);
+}
+
+vec3 shift_channels(vec3 current) {
+    vec2 shift = vec2(1.0 / resolution);
+    
+    float red_channel   = texture(texture_result, frag_texcoord + shift).r;
+    current.r += red_channel * 0.3f;
+
+    return current;
+}
 
 void main() {
     vec2 tx = frag_texcoord;
@@ -18,22 +38,16 @@ void main() {
 
     vec4 result = texture(texture_result, tx);
     vec3 bloom = texture(texture_bloom, tx).rgb;
+    
+    float bloom_intensivity = 0.22f;
 
+    result += texture(texture_gui, tx);
+    result.rgb += texture(texture_bloom, tx    ).rgb * bloom_intensivity;
+    result.rgb += texture(texture_bloom_gui, tx).rgb * bloom_intensivity;
 
-    float off = 0.00125f;
-    vec3 red_channel = texture(texture_result, tx+vec2(off, 0)).rgb * vec3(1, 0, 0);
-    vec3 cyan_channel = texture(texture_result, tx+vec2(off, 0)).rgb * vec3(0, 1, 1);
+    result.rgb = shift_channels(result.rgb);
+    result = add_scanlines(result);
 
-    result.r *= 0.5f;
-    result.rgb += red_channel;
-
-    result.gb *= 0.5;
-    result.rgb += cyan_channel;
-    result.rgb += bloom;
-
-    float line = 0.5+0.5*sin(frag_position.y*1.5 - time * 8);
-    line = line * 0.2 + 0.7;
-    result *= line;
-
+    result.rgb = pow(result.rgb, vec3(1.0f / 2.2f)); 
     out_color = result;
 }

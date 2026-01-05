@@ -55,10 +55,10 @@ void ENTMOVMOD_enemy_flying(struct gstate* gst, struct entity* entity) {
 
     }
     else {
-        if(!allow_up || !allow_down || enemy->spawn_event) {
+        if(!allow_up || !allow_down || entity->spawn_event) {
             entity->vel.y = (drand48() * 2.0 - 1.0) * 10;
         }
-        if(!allow_right || !allow_left || enemy->spawn_event) {
+        if(!allow_right || !allow_left || entity->spawn_event) {
             entity->vel.x = (drand48() * 2.0 - 1.0) * 10;
         }
     }

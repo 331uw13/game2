@@ -11,6 +11,9 @@
 #define SPRITE_FLIP_VERTICAL (1 << 0)
 #define SPRITE_FLIP_HORIZONTAL (1 << 1)
 
+
+struct gstate;
+
 struct sprite {
     int flags;
     struct animation* animptr;
@@ -22,6 +25,10 @@ struct sprite {
     float    anim_timer;
     float    anim_timer_interval;
     uint32_t anim_texture_index;
+
+    float    blink_timer;
+    float    blink_speed;
+    Color    color_tint;
 };
 
 
@@ -29,7 +36,7 @@ struct sprite null_sprite();
 void sprite_set_animation(struct sprite* sprite, struct animation* animptr);
 
 void update_sprite_animation(struct sprite* sprite, float frametime);
-void render_sprite(struct sprite* sprite, Vector2 pos);
+void render_sprite(struct gstate* gst, struct sprite* sprite, Vector2 pos);
 
 
 

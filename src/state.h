@@ -17,14 +17,23 @@ enum shaders : uint32_t {
     SHADERS_COUNT
 };
 
+enum textures : uint32_t {
+    TEXTURE_HEALTHBAR = 0,
+    TEXTURE_MANABAR,
+
+    TEXTURES_COUNT
+};
+
 struct gstate {
     int flags;
     Font      font;
     Shader    shaders   [SHADERS_COUNT];
 
     RenderTexture2D render_target;
-    RenderTexture2D bloom_result;
-
+    RenderTexture2D gui_target;
+    RenderTexture2D game_bloom;
+    RenderTexture2D gui_bloom;
+    
     int screen_width;
     int screen_height;
     float frametime;
@@ -33,8 +42,10 @@ struct gstate {
     struct world  world;
     struct player player;
 
+
     struct animation animations       [ANIMATIONS_COUNT];
 
+    Texture textures                  [TEXTURES_COUNT];
     Texture item_textures             [ITEM_TYPES_COUNT];
     char* item_descs                  [ITEM_TYPES_COUNT];
     enum item_rarity item_rarities    [ITEM_TYPES_COUNT];

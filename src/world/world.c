@@ -32,7 +32,6 @@ void load_world(struct world* w, int chunks_width, int chunks_height) {
     }
 
     /*
-
     w->fire_psystem = new_psystem(w, "world_psystem_fire");
     w->fire_emitter = add_particle_emitter
         (w->fire_psystem, 1024, (Rectangle){ 0, 0, 1, 1 });
@@ -56,9 +55,11 @@ void free_world(struct world* w) {
 }
 
 void render_world(struct gstate* gst, struct world* w) {
+    
     for(size_t i = 0; i < w->num_chunks; i++) {
         render_chunk(gst, &w->chunks[i]);
-    } 
+    }
+
    
     //update_psystem(gst, w->fire_psystem);
     //render_psystem(w->fire_psystem);
@@ -374,6 +375,7 @@ void init_world_entity(struct entity* entity, struct chunk* chunk, Vector2 pos) 
 
     entity->num_movement_mods = 0;
     entity->collision_radius = 10.0f;
+    entity->spawn_event = true;
 }
 
 

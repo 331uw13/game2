@@ -9,21 +9,27 @@
 */
 
 #include "sprite.h"
+#include "state.h"
 //#include "common.h"
 //#include "string.h"
 //#include "errmsg.h"
 
 
+#define BLINK_INTERVAL 0.1f
+
 
 struct sprite null_sprite() {
     return (struct sprite) {
         .flags = 0,
+        .color_tint = WHITE,
         .animptr = NULL,
         .max_width = 0,
         .max_height = 0,
         .anim_timer = 0.0f,
         .anim_timer_interval = 0.175f,
-        .anim_texture_index = 0
+        .anim_texture_index = 0,
+        .blink_timer = 0.0f,
+        .blink_speed = 15.0f
     };
 }
 
@@ -66,16 +72,29 @@ void update_sprite_animation(struct sprite* sprite, float frametime) {
         sprite->anim_texture_index++;
         sprite->anim_texture_index %= sprite->animptr->num_textures;
     }
+
 }
 
+#include <math.h>
 
-void render_sprite(struct sprite* sprite, Vector2 pos) {
+void render_sprite(struct gstate* gst, struct sprite* sprite, Vector2 pos) {
     if(sprite->animptr == NULL) {
         return;
     }
 
-    float rotation = 0;
-    
+    Color color = sprite->color_tint;
+
+    if(sprite->blink_timer > 0.0f) {
+        sprite->blink_timer -= gst->frametime;
+        int itimer = (int)floor(sprite->blink_timer * sprite->blink_speed) % 3;
+        if(itimer < 2) {
+            color.r *= 0.06;
+            color.g *= 0.06;
+            color.b *= 0.06;
+        }
+    }
+
+    float rotation = 0;    
     Texture* tex = &sprite->animptr->textures[sprite->anim_texture_index];
 
     pos.x = -pos.x;
@@ -96,6 +115,6 @@ void render_sprite(struct sprite* sprite, Vector2 pos) {
             },
             pos,
             rotation,
-            WHITE);
+            color);
 }
 

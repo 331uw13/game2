@@ -42,10 +42,7 @@ void render_inventory(struct gstate* gst, struct inventory* inv) {
   
     float scale = 1.0f;
 
-    // We are rendering in 2D camera mode
-    // so convert the position to world coordinate
-    // TODO: Should fix this. It creates floating point errors because resolution is divided.
-    Vector2 pos = get_world_coords(gst, inv->pos); 
+    Vector2 pos = inv->pos;
     Vector2 origin = pos;
 
     Color bg_color = (Color){ 30, 20, 10, 255 };

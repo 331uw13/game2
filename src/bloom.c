@@ -6,7 +6,7 @@
 
 
 #define NUM_SAMPLES  8
-#define SCALE_FACTOR 0.5f
+#define SCALE_FACTOR 0.9f
 
 #define GLSL_VERSION "#version 330\n"
 
@@ -23,12 +23,33 @@ GLSL_VERSION
 "out vec4 out_color;"
 ""
 "void main() {"
-"    vec4 black = vec4(0.0, 0.0, 0.0, 1.0);"
+
+    "vec4 color = texture(texture0, frag_texcoord);"
+    "float light = dot(color.rgb, vec3(0.7126, 0.7162, 0.122));"
+
+
+    "float knee = 0.1f;"
+    "float treshold = 0.5f;"
+    "float factor = smoothstep(treshold, treshold + knee, light);"
+
+    "out_color = color * factor;"
+
+    /*
+    "if(light > 0.6f) {"
+        "out_color = color;"
+    "}"
+    "else {"
+        "out_color = vec4(0, 0, 0, 1);"
+    "}"
+    */
+/*
+"    vec3 black = vec3(0.0, 0.0, 0.0);"
 "    vec4 result = texture(texture0, frag_texcoord);"
-"    float light = dot(result.rgb, vec3(0.9, 0.9, 0.9));"
+"    float light = dot(result.rgb, vec3(0.6, 0.4, 0.2));"
 ""
-"    out_color.rgb = mix(black, result, pow(light, 3.0)).rgb*0.7;"
+    "out_color.rgb = mix(black, result.rgb, light*light);"
 "    out_color.a = result.a;"
+*/
 "}";
 
 
@@ -83,6 +104,11 @@ GLSL_VERSION
 "uniform sampler2D texture0;"
 ""
 "out vec4 out_color;"
+
+"float gold_noise(in vec2 xy, in float seed){"
+"    float PHI = 1.61803398874989484820459;"
+"    return fract(tan(distance(xy*PHI, xy)*seed)*xy.x);"
+"}"
 ""
 "void main() {"
 ""
@@ -112,7 +138,7 @@ GLSL_VERSION
 "    }"
 ""
 "    result /= sum;"
-"    out_color = vec4(result, 1.0);"
+"    out_color = vec4(result, 1.0f);"
 "}";
 
 static const char* DEFAULT_VERTEX = 
@@ -160,8 +186,8 @@ void init_bloom(int screen_width, int screen_height) {
     int sample_res_Y = screen_height;
 
 
-    float sX = 0.8;
-    float sY = 0.8;
+    float sX = 1.0;
+    float sY = 1.0;
 
     for(int i = 0; i < NUM_SAMPLES; i++) {
         RenderTexture2D* target = &bloom.targets[i];

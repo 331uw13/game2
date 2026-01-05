@@ -13,7 +13,7 @@ enum item_type : uint32_t {
     ITEM_MIRROR_PARTICLE,
     ITEM_PLASMABEND,
     ITEM_GRAVITYBEND,
-
+    
     ITEM_TYPES_COUNT,
     ITEM_NONE
 };

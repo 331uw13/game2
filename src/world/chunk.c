@@ -290,7 +290,8 @@ void render_cell_grass(struct gstate* gst, struct chunk_cell* cell) {
                 p.y,
                 p.x + direction.x,
                 p.y + (direction.y - 2.0) * 0.5f,
-                GREEN);
+                (Color){ 30, 130, 30, 255 }
+                );
         interp += interp_increment;
     }
 }
@@ -345,10 +346,18 @@ void remove_entity(struct chunk* chunk, uint32_t index) {
 
     for(uint32_t i = index; i < chunk->num_entities-1; i++) {
         chunk->entities[i] = chunk->entities[i+1];
+        
+        /*if(chunk->entities[i].chunk_entity_index > 0) {
+            chunk->entities[i].chunk_entity_index--;
+        }*/
+    }
+
+    for(uint32_t i = index; i < chunk->num_entities; i++) {
         if(chunk->entities[i].chunk_entity_index > 0) {
             chunk->entities[i].chunk_entity_index--;
         }
-    }
+    } 
+
     chunk->num_entities--;
 }
 
@@ -368,9 +377,7 @@ bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
 
     struct chunk* correct_chunk = get_chunk(chunk->world, entity_chunk_x, entity_chunk_y);
     if(!correct_chunk) {
-        remove_entity(chunk, entity->chunk_entity_index);
-        errmsg("Entity moved to outside of world.");
-        return true;
+        return false;
     }
     
     if(correct_chunk->num_entities+1 >= CHUNK_ENTITIES_MAX) {
@@ -379,16 +386,20 @@ bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
         return true;
     }
 
+
+    // Copy entity to correct chunk first
+    // and then remove it from the old chunk.
+
     entity->parent_chunk_x = entity_chunk_x;
     entity->parent_chunk_y = entity_chunk_y;
 
+    uint32_t old_chunk_entity_index = entity->chunk_entity_index;
 
-    memcpy(&correct_chunk->entities[correct_chunk->num_entities],
-            entity,
-            sizeof *entity);
+    entity->chunk_entity_index = correct_chunk->num_entities;
+    correct_chunk->entities[correct_chunk->num_entities] = *entity;
 
     correct_chunk->num_entities++;
-    remove_entity(chunk, entity->chunk_entity_index);
+    remove_entity(chunk, old_chunk_entity_index);
 
     return true;
 }
@@ -408,7 +419,7 @@ void render_chunk_entities(struct gstate* gst, struct chunk* chunk) {
         entity_update_movement_mods(gst, entity);
 
         update_entity_animation(gst, entity);
-        render_sprite(&entity->sprite, entity->pos);
+        render_sprite(gst, &entity->sprite, entity->pos);
     }
 }
 
@@ -421,17 +432,14 @@ void render_chunk(struct gstate* gst, struct chunk* chunk) {
                 CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 BLUE);
-    */
 
-
-    /*
     DrawText(TextFormat("Entities: %i", chunk->num_entities),
                 chunk->col * CHUNK_SIZE * chunk->scale,
                 chunk->row * CHUNK_SIZE * chunk->scale,
-                20,
-                (Color){ 20, 150, 20, 200 }
+                16,
+                (Color){ 20, 130, 20, 200 }
             );*/
-    
+
     render_chunk_entities(gst, chunk);
 
     for(uint32_t i = 0; i < CHUNK_SIZE*CHUNK_SIZE; i++) {
@@ -441,12 +449,12 @@ void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
         switch(cell->type) {
             case T_ID_GRASS:
-                color = GREEN;
                 render_cell_grass(gst, cell);
+                color = (Color){ 20, 100, 20, 255 };
                 break;
 
             case T_ID_DIRT:
-                color = (Color){ 150, 80, 50, 255 };
+                color = (Color){ 80, 30, 50, 255 };
                 break;
         }
 

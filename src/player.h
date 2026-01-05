@@ -30,6 +30,13 @@ struct player {
     Vector2 surface;
     bool    got_surface;
 
+    float mana;
+    float max_mana;
+    float mana_regen;
+    float mana_regen_timer;
+    float mana_regen_delay;
+    float mana_cost_mult;
+
     bool moving; // TODO: Rename to "moving_by_user"
     bool was_moving;
     bool onground;
@@ -41,9 +48,6 @@ struct player {
     float attack_timer;
     float attack_delay;
     bool  casting_spell;
-    Vector2 spell_direction;
-    
-    int   attack_side; // -1 is to left, +1 is to right.
 
 
     bool              using_inventory;
@@ -68,6 +72,8 @@ void update_player(struct gstate* gst, struct player* pl);
 void render_player(struct gstate* gst, struct player* pl);
 void player_jump(struct player* pl);
 void free_player(struct player* pl);
+
+void render_player_infobar(struct gstate* gst, struct player* pl);
 
 
 #endif

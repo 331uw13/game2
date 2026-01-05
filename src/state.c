@@ -18,7 +18,8 @@
 #include "bloom.h"
 #include "perlin_noise.h"
 
-#define RESOLUTION_DIV  2.0
+#define RESOLUTION_DIV  2.25
+
 
 static
 void load_item_textures(struct gstate* gst) {
@@ -60,6 +61,12 @@ void load_animations(struct gstate* gst) {
 
 }
 
+static
+void load_textures(struct gstate* gst) {
+
+    gst->textures[TEXTURE_HEALTHBAR] = LoadTexture("./textures/healthbar.png");
+    gst->textures[TEXTURE_MANABAR] = LoadTexture("./textures/manabar.png");
+}
 
 const char* item_rarity_to_str(enum item_rarity rarity) {
     switch(rarity) {
@@ -93,7 +100,6 @@ struct gstate* gstate_init() {
 
     InitWindow(1200, 800, "game2");
 
-    /*
     ToggleBorderlessWindowed();
     int monitor = GetCurrentMonitor();
     int mon_width = GetMonitorWidth(monitor);
@@ -102,7 +108,6 @@ struct gstate* gstate_init() {
     Vector2 monitor_pos = GetMonitorPosition(monitor);
     SetWindowPosition(monitor_pos.x, monitor_pos.y);
     SetWindowSize(mon_width, mon_height);
-    */
 
     SetTargetFPS(TARGET_FPS);
 
@@ -114,7 +119,9 @@ struct gstate* gstate_init() {
 
 
     gst->render_target = LoadRenderTexture(gst->screen_width, gst->screen_height);
-    gst->bloom_result  = LoadRenderTexture(gst->screen_width, gst->screen_height);
+    gst->gui_target    = LoadRenderTexture(gst->screen_width, gst->screen_height);
+    gst->game_bloom    = LoadRenderTexture(gst->screen_width, gst->screen_height);
+    gst->gui_bloom     = LoadRenderTexture(gst->screen_width, gst->screen_height);
 
     gst->shaders[SHADER_NONE] = LoadShader(0, 0);
     load_shader(
@@ -125,6 +132,7 @@ struct gstate* gstate_init() {
 
     load_item_textures(gst);
     load_animations(gst);
+    load_textures(gst);
 
     init_bloom(gst->screen_width, gst->screen_height);
 
@@ -135,7 +143,6 @@ struct gstate* gstate_init() {
     
     create_player(gst, &gst->world, &gst->player, (Vector2){ CHUNK_SIZE * 8, CHUNK_SIZE * 8 });
     //create_player(gst, &gst->world, &gst->player, (Vector2){ 0, 0 });
-
 
 
     init_perlin_noise();
@@ -166,13 +173,17 @@ void free_gstate(struct gstate* gst) {
     for(uint32_t i = 0; i < ANIMATIONS_COUNT; i++) {
         free_animation(&gst->animations[i]);
     }
-
+    for(uint32_t i = 0; i < TEXTURES_COUNT; i++) {
+        UnloadTexture(gst->textures[i]);
+    }
+ 
     free_player(&gst->player);
     free_world(&gst->world);
     free_bloom();
    
     UnloadFont(gst->font);
     UnloadRenderTexture(gst->render_target);
+    UnloadRenderTexture(gst->gui_target);
     CloseWindow();
     
     freeif(gst);
@@ -181,10 +192,19 @@ void free_gstate(struct gstate* gst) {
 
 
 static
-void render(struct gstate* gst) {
+void render_game(struct gstate* gst) {
     render_player(gst, &gst->player);
     render_world(gst, &gst->world);
+
 }
+
+
+static
+void render_gui(struct gstate* gst) {
+    render_player_infobar(gst, &gst->player);
+
+}
+
 
 static
 void draw_tex(RenderTexture t, int w, int h) {
@@ -209,114 +229,90 @@ void gstate_rungame(struct gstate* gst) {
     while(!WindowShouldClose()) {
         gst->frametime = GetFrameTime();
 
+        // TODO: Clean this up. Added scopes to make 
+        //       it seem littlebit more clear what is what.
+
         BeginTextureMode(gst->render_target);
-        ClearBackground(BLACK);
-        BeginMode2D(gst->player.cam);
+        {
+            ClearBackground(BLACK);
+            BeginMode2D(gst->player.cam);
     
 
 
 
-        if(IsKeyPressed(KEY_T)) {
-            spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_BAT);
-        }
+            if(IsKeyPressed(KEY_T)) {
+                spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_BAT);
+            }
 
 
-        update_player(gst, &gst->player);
+            update_player(gst, &gst->player);
 
-        gst->world_mouse_pos = get_world_coords(gst, GetMousePosition());
-        /*gst->world_mouse_pos.x = mouse.x / RESOLUTION_DIV - gst->screen_width / 2;
-        gst->world_mouse_pos.y = mouse.y / RESOLUTION_DIV - gst->screen_height / 2;
-        gst->world_mouse_pos.x += gst->player.pos.x;
-        gst->world_mouse_pos.y += gst->player.pos.y;
-        */
-        gst->player.cam.offset.x = gst->screen_width / 2;
-        gst->player.cam.offset.y = gst->screen_height / 2;
-        gst->player.cam.target.x = gst->player.entity.pos.x;
-        gst->player.cam.target.y = gst->player.entity.pos.y;
+            gst->world_mouse_pos = get_world_coords(gst, GetMousePosition());
+            /*gst->world_mouse_pos.x = mouse.x / RESOLUTION_DIV - gst->screen_width / 2;
+            gst->world_mouse_pos.y = mouse.y / RESOLUTION_DIV - gst->screen_height / 2;
+            gst->world_mouse_pos.x += gst->player.pos.x;
+            gst->world_mouse_pos.y += gst->player.pos.y;
+            */
+            gst->player.cam.offset.x = gst->screen_width / 2;
+            gst->player.cam.offset.y = gst->screen_height / 2;
+            gst->player.cam.target.x = gst->player.entity.pos.x;
+            gst->player.cam.target.y = gst->player.entity.pos.y;
 
 
        
-        render(gst);
+            render_game(gst);
      
-        /*
-        // FOR TESTING
-        {
-
-            Vector2 player_feet = 
-             (Vector2){ gst->player.pos.x + 16, gst->player.pos.y + 33 };
-
-
-
-            static Vector2 dir = NV_DOWN;
-            if(IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-                dir.x += GetMouseDelta().x;
-                dir.y += GetMouseDelta().y;
-            }
-
-
-            Vector2 surface;
-            if(get_surface(&gst->world, player_feet, dir, &surface)) {
-                DrawCircle(surface.x, surface.y, 2.0f, BLUE);
-            
-                if(IsKeyDown(KEY_LEFT_ALT)) {
-                    gst->player.pos.y = surface.y - 34;
-                }
-            }
-
-
+            EndMode2D();
         }
-        */
-        /*
-        // FOR TESTING
-        {
-
-            struct chunk_cell* chunk_cell = get_chunk_cell_at(&test_chunk,
-                    (Vector2){ gst->player.pos.x + 16, gst->player.pos.y + 33 });
-
-            if(chunk_cell) {
-                switch(chunk_cell->id) {
-                    case S_ID_SURFACE:
-                        DrawLine(
-                                chunk_cell->segment.va.x,
-                                chunk_cell->segment.va.y,
-                                chunk_cell->segment.vb.x,
-                                chunk_cell->segment.vb.y,
-                                BLUE);
-                        printf("S_ID_SURFACE\n");
-                        break;
-
-                    case S_ID_AIR:
-                        printf("S_ID_AIR\n");
-                        break;
-
-                    case S_ID_FULL:
-                        printf("S_ID_FULL\n");
-                        break;
-                }
-            }
-        }
-        */
-
-        EndMode2D();
         EndTextureMode();
 
+
+        BeginTextureMode(gst->gui_target);
+        {
+            ClearBackground(BLACK);
+            render_gui(gst);
+        }
         
 
-        render_bloom(gst->render_target, &gst->bloom_result);
-
+        // TODO: Only one bloom render pass is needed
+        //       if we would first combine the textures.
+        render_bloom(gst->render_target, &gst->game_bloom);
+        render_bloom(gst->gui_target, &gst->gui_bloom);
 
         
+
+
+        // Post process results.
+
         BeginDrawing();
         ClearBackground(BLACK);
         
-        //draw_tex(gst->bloom_result, screen_width, screen_height);
         BeginShaderMode(gst->shaders[ SHADER_POSTPROCESS ]);
 
         uniform1f(gst->shaders[ SHADER_POSTPROCESS ], "time", GetTime());
 
         SetShaderValueTexture(gst->shaders[ SHADER_POSTPROCESS ],
                 GetShaderLocation(gst->shaders[ SHADER_POSTPROCESS ], "texture_bloom"),
-                gst->bloom_result.texture);
+                gst->game_bloom.texture);
+
+
+        SetShaderValueTexture(gst->shaders[ SHADER_POSTPROCESS ],
+                GetShaderLocation(gst->shaders[ SHADER_POSTPROCESS ], "texture_gui"),
+                gst->gui_target.texture);
+
+
+        SetShaderValueTexture(gst->shaders[ SHADER_POSTPROCESS ],
+                GetShaderLocation(gst->shaders[ SHADER_POSTPROCESS ], "texture_bloom_gui"),
+                gst->gui_bloom.texture);
+
+        float resolution[] = { gst->screen_width, gst->screen_height };
+        SetShaderValueV(gst->shaders[ SHADER_POSTPROCESS ],
+                GetShaderLocation(gst->shaders[ SHADER_POSTPROCESS ], "resolution"),
+                resolution,
+                SHADER_UNIFORM_VEC2, 1);
+
+
+        
 
         draw_tex(gst->render_target, 
                 gst->screen_width * RESOLUTION_DIV,
@@ -324,6 +320,9 @@ void gstate_rungame(struct gstate* gst) {
 
     
         EndShaderMode();
+    
+
+        /*
         DrawFPS(5, GetScreenHeight()-25);
         DrawText(TextFormat("X: %i, Y: %i onground: %s | jumps: %i | moving: %s",
                     (int)gst->player.entity.pos.x,
@@ -335,6 +334,7 @@ void gstate_rungame(struct gstate* gst) {
                 120,
                 GetScreenHeight()-25,
                 20, GREEN);
+                */
         EndDrawing();
     }
 }

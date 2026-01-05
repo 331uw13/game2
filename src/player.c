@@ -20,7 +20,7 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->entity.world = NULL;
     pl->jump_counter = 0;
     pl->attack_timer = 0.0f;
-    pl->attack_delay = 0.01f;
+    pl->attack_delay = 0.02f;
     pl->onground = false;
     pl->spell_force = 0.0f;
     pl->entity.world = world;
@@ -28,9 +28,17 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->pickedup_item = NULL;
 
 
+    pl->entity.max_health = 100;
+    pl->entity.health = pl->entity.max_health;
     pl->entity.type = ENTITY_PLAYER;
     pl->entity.collision_radius = 10.0f;
-
+   
+    pl->max_mana = 30.0f;
+    pl->mana_regen = 1.5f;
+    pl->mana_regen_delay = 1.0f;
+    pl->mana_regen_timer = 0.0f;
+    pl->mana_cost_mult = 1.0f;
+    pl->mana = pl->max_mana;
 
     pl->spell_psys = new_psystem(world, "player_spell_psystem");
     pl->spell_emitter = add_particle_emitter(pl->spell_psys, 2000, (Rectangle){ 0, 0, 20, 20 });
@@ -218,6 +226,19 @@ void update_position(struct player* pl, float frametime) {
 
 }
 
+static
+Vector2 get_spell_direction() {
+    Vector2 mouse = GetMousePosition();
+    Vector2 screen = (Vector2) {
+        GetScreenWidth(),
+        GetScreenHeight()
+    };
+
+    return Vector2Normalize((Vector2) {
+        mouse.x - screen.x / 2,
+        mouse.y - screen.y / 2
+    });
+}
 
 static
 void update_attacking(struct gstate* gst, struct player* pl) {
@@ -227,36 +248,39 @@ void update_attacking(struct gstate* gst, struct player* pl) {
                 // Nothing will happen.
     }
 
-    if(pl->attack_button_down && !pl->casting_spell && !pl->using_inventory) {
+    if(pl->attack_button_down
+    && (pl->mana > 0.1f * pl->mana_cost_mult)
+    && !pl->casting_spell
+    && !pl->using_inventory
+    ) {
         pl->attack_timer = 0.0f;
         pl->casting_spell = true;
 
-        Vector2 mouse = GetMousePosition();
-        Vector2 screen = (Vector2) {
-            GetScreenWidth(),
-            GetScreenHeight()
-        };
 
-        pl->attack_side = (mouse.x < screen.x / 2) ? -1 : 1;
-  
-        pl->spell_direction = Vector2Normalize((Vector2) {
-            mouse.x - screen.x / 2,
-            mouse.y - screen.y / 2
-        });
+        Vector2 spell_direction = get_spell_direction();
 
         pl->spell_emitter->cfg.initial_velocity 
-            = Vector2Scale(pl->spell_direction, 7.0f);
+            = Vector2Scale(spell_direction, 7.0f);
         
-        pl->spell_emitter->cfg.spawn_rect.x = pl->entity.pos.x + pl->spell_direction.x * 30;
-        pl->spell_emitter->cfg.spawn_rect.y = pl->entity.pos.y + pl->spell_direction.y * 30;
+        pl->spell_emitter->cfg.spawn_rect.x = pl->entity.pos.x + spell_direction.x * 30;
+        pl->spell_emitter->cfg.spawn_rect.y = pl->entity.pos.y + spell_direction.y * 30;
         pl->spell_emitter->cfg.spawn_rect.width = 8;
         pl->spell_emitter->cfg.spawn_rect.height = 8;
 
 
-        pl->entity.vel.x -= pl->spell_direction.x * pl->spell_force;
-        pl->entity.vel.y -= pl->spell_direction.y * pl->spell_force;
+        pl->entity.vel.x -= spell_direction.x * pl->spell_force;
+        pl->entity.vel.y -= spell_direction.y * pl->spell_force;
 
         add_particles(gst, pl->spell_psys, 10);
+
+        pl->mana -= 0.1f * pl->mana_cost_mult;
+        pl->mana_regen_timer = 0.0f;
+        if(pl->mana <= 1.0f) {
+            pl->mana_regen_delay = 3.0f;
+        }
+        else {
+            pl->mana_regen_delay = 1.0f;
+        }
     }
 
 
@@ -368,6 +392,15 @@ void update_player(struct gstate* gst, struct player* pl) {
         // Stopped moving.
         sprite_set_animation(&pl->entity.sprite, &gst->animations[ANIM_PLAYER_IDLE]);
     }
+
+
+    if(pl->mana_regen_timer > pl->mana_regen_delay) {
+        pl->mana += pl->mana_regen * gst->frametime;
+        pl->mana = CLAMP(pl->mana, 0.0f, pl->max_mana);
+    }
+    else {
+        pl->mana_regen_timer += gst->frametime;
+    }
 }
 
 
@@ -390,18 +423,21 @@ void render_pickedup_item(struct gstate* gst, struct player* pl) {
 
 void render_player(struct gstate* gst, struct player* pl) {
 
-    render_sprite(&pl->entity.sprite, (Vector2) { pl->entity.pos.x, pl->entity.pos.y - 6.0f });
-    render_inventory(gst, pl->inventory);
+    pl->entity.sprite.color_tint = (Color){ 60, 60, 60, 255 };
+    render_sprite(gst, &pl->entity.sprite, (Vector2) { pl->entity.pos.x, pl->entity.pos.y - 6.0f });
     
     render_psystem(gst, pl->spell_psys);
     render_pickedup_item(gst, pl);
 
-    if(pl->attack_button_down && !pl->using_inventory && pl->spell_psys->num_particle_mods > 1) {
+    if(pl->attack_button_down
+    && !pl->using_inventory
+    && pl->spell_psys->num_particle_mods > 1) {
 
         Vector2 wand_pos = pl->entity.pos;
         Vector2 wand_offset = (Vector2){ 6, 13 };
 
-        float angle = atan2(pl->spell_direction.y, pl->spell_direction.x) * RAD2DEG;
+        Vector2 spell_direction = get_spell_direction();
+        float angle = atan2(spell_direction.y, spell_direction.x) * RAD2DEG;
 
         draw_texture(gst->item_textures[ITEM_WAND],
                 wand_pos,
@@ -409,5 +445,90 @@ void render_player(struct gstate* gst, struct player* pl) {
                 angle + 90.0 + 15.0f,
                 1.0f, WHITE);
     }
+}
+
+
+void render_player_infobar(struct gstate* gst, struct player* pl) {
+    render_inventory(gst, pl->inventory);
+
+
+    if(IsKeyPressed(KEY_R)) {
+        damage_entity(&pl->entity, 10);
+    }
+
+
+    Vector2 infobars_pos = (Vector2) {
+        50.0f,
+        gst->screen_height - 100
+    };
+
+    const float infobar_scale = 1.5f;
+
+    const int innerbar_width = 16 * infobar_scale;
+    const int innerbar_height = (64 - 13) * infobar_scale;
+   
+    const int infobar_offset_x = 16 * infobar_scale;
+    const int infobar_offset_y = 8 * infobar_scale;
+           
+
+    //map_fvalue(pl->entity.health, 0.0f, pl->entity.max_health, 0.0f, innerbar_height),
+
+
+
+    // Health bar.
+
+    float healthbar_offset = 
+        map_fvalue(pl->entity.health, 0.0f, pl->entity.max_health, 0.0f, innerbar_height);
+    DrawRectangle(
+            infobars_pos.x,
+            infobars_pos.y + (innerbar_height - healthbar_offset) + 1,
+            innerbar_width,
+            healthbar_offset,
+            RED);
+
+
+    Color health_low = (Color){ 40, 10, 20, 255 };
+    Color health_high = (Color){ 200, 20, 80, 255 };
+
+    DrawTextureEx(gst->textures[TEXTURE_HEALTHBAR],
+            (Vector2) {
+                infobars_pos.x - infobar_offset_x,
+                infobars_pos.y - infobar_offset_y
+            },
+            0.0f,
+            infobar_scale, 
+            ColorLerp(health_low, health_high, (float)pl->entity.health / (float)pl->entity.max_health));
+
+
+    infobars_pos.x += 32 * infobar_scale;
+
+
+
+    // Mana bar.
+
+    float manabar_offset = 
+        map_fvalue(pl->mana, 0.0f, pl->max_mana, 0.0f, innerbar_height);
+    DrawRectangle(
+            infobars_pos.x,
+            infobars_pos.y + (innerbar_height - manabar_offset) + 1,
+            innerbar_width,
+            manabar_offset,
+            (Color){ 200, 80, 250, 255 });
+
+    Color mana_low = (Color){ 40, 10, 20, 255 };
+    Color mana_high = (Color){ 135, 135, 135, 255 };
+
+    DrawTextureEx(gst->textures[TEXTURE_MANABAR],
+            (Vector2) {
+                infobars_pos.x - infobar_offset_x,
+                infobars_pos.y - infobar_offset_y
+            },
+            0.0f,
+            infobar_scale, 
+            ColorLerp(mana_low, mana_high, pl->mana / pl->max_mana));
+
+
+
+
 }
 
