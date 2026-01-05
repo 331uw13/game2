@@ -14,25 +14,51 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
 
     pl->cam.rotation = 0.0f;
     pl->cam.zoom = 1.0f;
-    pl->entity.pos = spawn_pos;
-    pl->want_pos = pl->entity.pos;
     pl->moving = false;
     pl->entity.world = NULL;
     pl->jump_counter = 0;
     pl->attack_timer = 0.0f;
     pl->attack_delay = 0.02f;
-    pl->onground = false;
     pl->spell_force = 0.0f;
-    pl->entity.world = world;
     pl->using_inventory = false;
     pl->pickedup_item = NULL;
 
 
+    pl->entity = null_entity();
+    pl->entity.world = world;
     pl->entity.max_health = 100;
     pl->entity.health = pl->entity.max_health;
     pl->entity.type = ENTITY_PLAYER;
-    pl->entity.collision_radius = 10.0f;
-   
+    
+    pl->entity.pos = spawn_pos;
+    pl->entity.want_pos = pl->entity.pos;
+    pl->entity.sprite.render_offset.y = -6;
+
+    // Hitarea for world collisions
+    entity_add_hitarea(&pl->entity,
+            (struct hitarea) {
+                .impact_damage_mult = -1,
+                .offset = (Vector2) { 0, 0 },
+                .radius = 10.0f
+            });
+
+    // Hitarea for head.
+    entity_add_hitarea(&pl->entity,
+            (struct hitarea) {
+                .impact_damage_mult = 1.75f,
+                .offset = (Vector2) { 0, -14 },
+                .radius = 6.0f
+            });
+
+    // Hitarea for body and feet
+    entity_add_hitarea(&pl->entity,
+            (struct hitarea) {
+                .impact_damage_mult = 1.75f,
+                .offset = (Vector2) { 0, 0 },
+                .radius = 6.0f
+            });
+
+
     pl->max_mana = 30.0f;
     pl->mana_regen = 1.5f;
     pl->mana_regen_delay = 1.0f;
@@ -47,10 +73,10 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->inventory->pos = (Vector2){ 10,  10 };
 
 
-    pl->entity.sprite = null_sprite();
     sprite_set_animation(&pl->entity.sprite, &gst->animations[ANIM_PLAYER_IDLE]);
 
-    //add_particle_mod(pl->spell_psys, PMOD_fire_particle);
+    add_particle_mod(pl->spell_psys, PMOD_fire_particle);
+    add_particle_mod(pl->spell_psys, PMOD_fire_particle);
     
     //add_particle_mod(pl->spell_psys, PMOD_default_particle);
     add_particle_mod(pl->spell_psys, PMOD_physical_particle);
@@ -64,8 +90,8 @@ void free_player(struct player* pl) {
 
 static
 void get_movement_input(struct player* pl, float frametime) {
-    float speed = 500;
-    pl->want_pos = pl->entity.pos;
+    float speed = 600;
+    pl->entity.want_pos = pl->entity.pos;
 
     if(IsKeyDown(KEY_LEFT_CONTROL)) {
         speed *= 2;
@@ -91,7 +117,6 @@ void get_movement_input(struct player* pl, float frametime) {
         player_jump(pl);
     }
     
-
     pl->was_moving = pl->moving;
     pl->moving = (Vector2Distance(old_vel, pl->entity.vel) > 0.1f);
 }
@@ -130,6 +155,19 @@ void update_position(struct player* pl, float frametime) {
     const float chunk_scale = pl->entity.world->chunks[0].scale;
    
 
+    
+    float friction = pow(1.0f - 0.00985f, 500.0f * frametime);
+    pl->entity.vel.x *= friction;
+   
+    // Gravity.
+    pl->entity.vel.y += 10.0f * (frametime * 60.0f);
+    
+    pl->entity.want_pos.x += pl->entity.vel.x * frametime;
+    pl->entity.want_pos.y += pl->entity.vel.y * frametime;
+
+    entity_world_collision_adjust(&pl->entity, frametime);
+
+    /*
 
     pl->want_pos.x += pl->entity.vel.x * frametime;
     pl->want_pos.y += pl->entity.vel.y * frametime;
@@ -142,7 +180,7 @@ void update_position(struct player* pl, float frametime) {
     pl->entity.vel.y += 10.0f * (frametime * 60.0f);
 
 
-    float radius = pl->entity.collision_radius;
+    float radius = pl->entity.hitareas[0].radius;
     Vector2 center = (Vector2){
         pl->entity.pos.x,
         pl->entity.pos.y
@@ -154,7 +192,7 @@ void update_position(struct player* pl, float frametime) {
         return;
     }
 
-    //DrawCircleLines(center.x, center.y, radius, RED);
+
 
 
     pl->got_surface = get_surface(pl->entity.world, center, NV_DOWN, &pl->surface, NULL);
@@ -223,6 +261,7 @@ void update_position(struct player* pl, float frametime) {
     if(!pl->onground) {
         pl->jumped = false;
     }
+    */
 
 }
 
@@ -424,7 +463,8 @@ void render_pickedup_item(struct gstate* gst, struct player* pl) {
 void render_player(struct gstate* gst, struct player* pl) {
 
     pl->entity.sprite.color_tint = (Color){ 60, 60, 60, 255 };
-    render_sprite(gst, &pl->entity.sprite, (Vector2) { pl->entity.pos.x, pl->entity.pos.y - 6.0f });
+    entity_render(gst, &pl->entity);
+    //render_sprite(gst, &pl->entity.sprite, (Vector2) { pl->entity.pos.x, pl->entity.pos.y - 6.0f });
     
     render_psystem(gst, pl->spell_psys);
     render_pickedup_item(gst, pl);

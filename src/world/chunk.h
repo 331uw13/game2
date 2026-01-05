@@ -9,7 +9,8 @@
 #include "../entity/entity.h"
 
 
-#define CHUNK_SIZE 64
+//#define CHUNK_SIZE 64
+#define CHUNK_SIZE 16
 
 #define NORMAL_DOWN(y) (y >  0.001f)
 #define NORMAL_UP(y)   (y < -0.001f)

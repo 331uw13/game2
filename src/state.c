@@ -53,19 +53,18 @@ void load_item_textures(struct gstate* gst) {
 
 static
 void load_animations(struct gstate* gst) {
-
     load_animation(&gst->animations[ANIM_PLAYER_IDLE], "./animations/player/idle");
     load_animation(&gst->animations[ANIM_PLAYER_WALK], "./animations/player/walk");
-    
-    load_animation(&gst->animations[ANIM_ENEMY_BAT_FLY], "./animations/enemy_bat/fly");
 
+    load_animation(&gst->animations[ANIM_ENEMY_BAT_FLY], "./animations/enemy_bat/fly");
+    load_animation(&gst->animations[ANIM_ENEMY_ZOMBIE_WALK], "./animations/enemy_zombie/walk");
 }
 
 static
 void load_textures(struct gstate* gst) {
-
     gst->textures[TEXTURE_HEALTHBAR] = LoadTexture("./textures/healthbar.png");
     gst->textures[TEXTURE_MANABAR] = LoadTexture("./textures/manabar.png");
+
 }
 
 const char* item_rarity_to_str(enum item_rarity rarity) {
@@ -98,8 +97,10 @@ void spawn_starting_spells(struct gstate* gst, Vector2 pos) {
 struct gstate* gstate_init() {
     struct gstate* gst = malloc(sizeof *gst);
 
-    InitWindow(1200, 800, "game2");
+    gst->flags = 0;
+    InitWindow(1200, 900, "game2");
 
+    /*
     ToggleBorderlessWindowed();
     int monitor = GetCurrentMonitor();
     int mon_width = GetMonitorWidth(monitor);
@@ -108,6 +109,7 @@ struct gstate* gstate_init() {
     Vector2 monitor_pos = GetMonitorPosition(monitor);
     SetWindowPosition(monitor_pos.x, monitor_pos.y);
     SetWindowSize(mon_width, mon_height);
+    */
 
     SetTargetFPS(TARGET_FPS);
 
@@ -229,6 +231,16 @@ void gstate_rungame(struct gstate* gst) {
     while(!WindowShouldClose()) {
         gst->frametime = GetFrameTime();
 
+
+        if(IsKeyPressed(KEY_T)) {
+            if(gst->flags & STATEFLG_SHOW_ENTITY_HITAREAS) {
+                gst->flags &= ~STATEFLG_SHOW_ENTITY_HITAREAS;
+            }
+            else {
+                gst->flags |= STATEFLG_SHOW_ENTITY_HITAREAS;
+            }
+        }
+
         // TODO: Clean this up. Added scopes to make 
         //       it seem littlebit more clear what is what.
 
@@ -240,10 +252,12 @@ void gstate_rungame(struct gstate* gst) {
 
 
 
-            if(IsKeyPressed(KEY_T)) {
+            if(IsKeyPressed(KEY_ONE)) {
                 spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_BAT);
             }
-
+            if(IsKeyPressed(KEY_TWO)) {
+                spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_ZOMBIE);
+            }
 
             update_player(gst, &gst->player);
 

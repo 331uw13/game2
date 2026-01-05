@@ -14,7 +14,7 @@ enum animations : uint32_t {
     ANIM_PLAYER_WALK,
 
     ANIM_ENEMY_BAT_FLY,
-
+    ANIM_ENEMY_ZOMBIE_WALK,
 
 
     ANIMATIONS_COUNT

@@ -10,6 +10,10 @@
 #include "psystem.h"
 
 
+
+#define STATEFLG_SHOW_ENTITY_HITAREAS (1 << 0)
+
+
 enum shaders : uint32_t {
     SHADER_NONE = 0,
     SHADER_POSTPROCESS,

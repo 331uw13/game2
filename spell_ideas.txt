@@ -4,4 +4,8 @@
 + Multiply particle on enemy hit
 
 
++ Mana regenerates by pressing X but it takes same amount of health
++ Mana regenerates faster but player takes more damage based on how much mana is left
+
+
 

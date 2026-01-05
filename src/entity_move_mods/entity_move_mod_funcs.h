@@ -22,7 +22,7 @@ typedef void(entity_move_mod_fn_t)(struct gstate* gst, struct entity*);
 
 void ENTMOVMOD_enemy_flying(struct gstate* gst, struct entity* entity);
 void ENTMOVMOD_enemy_vision(struct gstate* gst, struct entity* entity);
-
+void ENTMOVMOD_enemy_walking(struct gstate* gst, struct entity* entity);
 
 
 #endif

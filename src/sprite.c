@@ -23,6 +23,7 @@ struct sprite null_sprite() {
         .flags = 0,
         .color_tint = WHITE,
         .animptr = NULL,
+        .render_offset = (Vector2) { 0, 0 },
         .max_width = 0,
         .max_height = 0,
         .anim_timer = 0.0f,
@@ -96,11 +97,15 @@ void render_sprite(struct gstate* gst, struct sprite* sprite, Vector2 pos) {
 
     float rotation = 0;    
     Texture* tex = &sprite->animptr->textures[sprite->anim_texture_index];
+    
+    pos.x += sprite->render_offset.x;
+    pos.y += sprite->render_offset.y;
 
     pos.x = -pos.x;
     pos.y = -pos.y;
     pos.x += tex->width / 2;
     pos.y += tex->height / 2;
+
 
     DrawTexturePro(*tex,
             (Rectangle){
@@ -116,5 +121,6 @@ void render_sprite(struct gstate* gst, struct sprite* sprite, Vector2 pos) {
             pos,
             rotation,
             color);
+    
 }
 

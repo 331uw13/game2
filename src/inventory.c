@@ -45,8 +45,8 @@ void render_inventory(struct gstate* gst, struct inventory* inv) {
     Vector2 pos = inv->pos;
     Vector2 origin = pos;
 
-    Color bg_color = (Color){ 30, 20, 10, 255 };
-    Color box_color = (Color){ 10, 5, 2, 255 };
+    Color bg_color = (Color){ 10, 4, 1, 255 };
+    Color box_color = (Color){ 4, 2, 1, 255 };
     DrawRectangle(pos.x, pos.y, inv->box_size * inv->columns, inv->box_size * inv->rows, bg_color);
 
 

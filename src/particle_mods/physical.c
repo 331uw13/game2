@@ -16,6 +16,41 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
     }
 
 
+    // Check collision with enemy entities.
+    
+    struct world* particle_world = emitter->psystem->world;
+
+    struct chunk* chunk = get_chunk(particle_world, part->pos);
+    if(chunk) {
+
+        /*
+        for(uint32_t i = 0; i < chunk->num_entities; i++) {
+            struct entity* entity = &chunk->entities[i];
+            if(entity->type != ENTITY_ENEMY) {
+                continue;
+            }
+
+            float dist_to_enemy = Vector2Distance(part->pos, entity->pos);
+            if(dist_to_enemy > entity->collision_radius) {
+                continue;
+            }
+
+            damage_entity(entity, 1);
+            
+            // Knockback.
+            Vector2 dir_to_enemy = Vector2Normalize(Vector2Subtract(entity->pos, part->pos));
+            entity->vel.x += dir_to_enemy.x * 5;
+            entity->vel.y += dir_to_enemy.y * 5;
+            
+            part->lifetime = 0;
+            break;
+        }
+        */
+    }
+
+
+    // Collision checks with terrain.
+
     part->vel.x = CLAMP(part->vel.x, -30.0f, 30.0f);
     part->vel.y = CLAMP(part->vel.y, -30.0f, 30.0f);
 
@@ -51,6 +86,7 @@ void PMOD_physical_particle(PARTICLE_MOD_FUNC_ARGS) {
         part->pos.x -= 1.0f;
         part->vel = Vector2Reflect(part->vel, righthit_normal);
     }
+
 
     /*
     if(!allow_up || !allow_right || !allow_left || !allow_down) {

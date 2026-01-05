@@ -12,10 +12,10 @@ void ENTMOVMOD_enemy_flying(struct gstate* gst, struct entity* entity) {
    
     struct enemy* enemy = &entity->enemy;
 
-    bool allow_up    = can_move_up(entity->world, entity->pos, entity->collision_radius, NULL);
-    bool allow_down  = can_move_down(entity->world, entity->pos, entity->collision_radius, NULL);
-    bool allow_left  = can_move_left(entity->world, entity->pos, entity->collision_radius, NULL);
-    bool allow_right = can_move_right(entity->world, entity->pos, entity->collision_radius, NULL);
+    bool allow_up    = can_move_up(entity->world, entity->pos, entity->hitareas[0].radius, NULL);
+    bool allow_down  = can_move_down(entity->world, entity->pos, entity->hitareas[0].radius, NULL);
+    bool allow_left  = can_move_left(entity->world, entity->pos, entity->hitareas[0].radius, NULL);
+    bool allow_right = can_move_right(entity->world, entity->pos, entity->hitareas[0].radius, NULL);
 
     if(!allow_up) {
         entity->pos.y += 1.0f;
@@ -29,8 +29,6 @@ void ENTMOVMOD_enemy_flying(struct gstate* gst, struct entity* entity) {
     if(!allow_right) {
         entity->pos.x -= 1.0f;
     }
-
-
 
     if(enemy->can_see_player) {
         Vector2 dir_to_player = Vector2Normalize(Vector2Subtract(entity->pos, gst->player.entity.pos));
@@ -49,7 +47,7 @@ void ENTMOVMOD_enemy_flying(struct gstate* gst, struct entity* entity) {
         entity->vel.x -= dir_to_player.x * (gst->frametime * v_mult);
         entity->vel.y -= dir_to_player.y * (gst->frametime * v_mult);
 
-        const float vmax = 10.0f;
+        const float vmax = 5.0f;
         entity->vel.x = CLAMP(entity->vel.x, -vmax, vmax);
         entity->vel.y = CLAMP(entity->vel.y, -vmax, vmax);
 

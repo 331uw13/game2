@@ -38,11 +38,9 @@ float perlin_noise_2D(float x, float y) {
     int B = (p[X+1] + Y) & 255;
 
     return Lerp(Lerp(grad2d(p[A],   x, y), 
-                           grad2d(p[B  ], x-1, y), v),
+                           grad2d(p[B  ], x-1, y), u),
                    Lerp(grad2d(p[A+1], x, y-1), 
-                           grad2d(p[B+1], x-1, y-1), v), v);
-
-                           
+                           grad2d(p[B+1], x-1, y-1), u), v);
 }
 
 void init_perlin_noise() {

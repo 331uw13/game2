@@ -36,7 +36,8 @@ void render_world(struct gstate* gst, struct world* w);
 void free_world(struct world* w);
 bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surface, Vector2* normal);
 
-struct chunk*      get_chunk(struct world* w, int col, int row);
+struct chunk*      get_chunk(struct world* w, Vector2 pos);
+struct chunk*      get_chunk_cr(struct world* w, int col, int row);
 struct chunk_cell* get_world_chunk_cell(struct world* w, int world_col, int world_row);
 struct chunk_cell* get_world_chunk_cell_v(struct world* w, Vector2 p);
 

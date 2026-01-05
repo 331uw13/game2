@@ -14,14 +14,12 @@
 #define NV_UP    ((Vector2){  0.0f, -1.0f })
 
 
-/*
 enum direction {
     D_LEFT,
     D_RIGHT,
     D_UP,
     D_DOWN
 };
-*/
 
 
 

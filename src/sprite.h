@@ -17,6 +17,7 @@ struct gstate;
 struct sprite {
     int flags;
     struct animation* animptr;
+    Vector2 render_offset;
 
     // Max animation texture width and height.
     int max_width;

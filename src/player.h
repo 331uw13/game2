@@ -16,19 +16,10 @@ struct player {
     Camera2D cam;
 
     struct entity entity;
-    Vector2 want_pos;
 
-    /*
-    Vector2 pos;
-    Vector2 want_pos;
-    Vector2 old_pos;
-    Vector2 vel;
-    */
-    /*Vector2 feet_pos;
-    Vector2 head_pos;
-    Vector2 body_pos;*/
     Vector2 surface;
     bool    got_surface;
+
 
     float mana;
     float max_mana;
@@ -39,7 +30,7 @@ struct player {
 
     bool moving; // TODO: Rename to "moving_by_user"
     bool was_moving;
-    bool onground;
+    
     int  jump_counter;
     bool jumped;
     bool attack_button_pressed;

@@ -329,6 +329,56 @@ void update_chunk_enemies(struct gstate* gst, struct chunk* chunk) {
 }
 */
 
+static
+void deepcopy_entity(struct chunk* chunk, struct entity* from, struct entity* to) {
+
+    memmove(to, from, sizeof *from);
+
+    memmove(to->hitareas, from->hitareas, sizeof(from->hitareas));
+    memmove(to->movement_mods, from->movement_mods, sizeof(from->movement_mods));
+
+
+    if(to->type == ENTITY_ENEMY) {
+        memmove(&to->enemy, &from->enemy, sizeof(struct enemy));
+    }
+
+
+    // TODO: 
+    /*
+
+
+       - Create big array of all entities in the world
+
+       - Create linked list for chunks (pointers to world enemies)
+         enemies dont need to be copied.
+
+
+       */
+
+    /*
+    to->want_pos = from->want_pos;
+    to->pos = from->pos;
+    to->vel = from->vel;
+    to->on_ground = from->on_ground;
+    to->world = from->world;
+    to->sprite = from->sprite;
+    to->health = from->health;
+    to->max_health = from->max_health;
+
+    memmove(to->hitareas, from->hitareas, sizeof(from->hitareas));
+    to->num_hitareas = from->num_hitareas;
+    
+    memmove(to->movement_mods, from->movement_mods, sizeof(from->movement_mods));
+    to->num_movement_mods = from->num_movement_mods;
+
+    to->type = from->type;
+    to->spawn_event = from->spawn_event;
+
+    if(to->type == ENTITY_ENEMY) {
+        to->enemy.type = from->enemy.type;
+    }
+    */
+}
 
 void remove_entity(struct chunk* chunk, uint32_t index) {
     if(chunk->num_entities == 0) {
@@ -344,23 +394,23 @@ void remove_entity(struct chunk* chunk, uint32_t index) {
         return;
     }
 
+
     for(uint32_t i = index; i < chunk->num_entities-1; i++) {
-        chunk->entities[i] = chunk->entities[i+1];
+        deepcopy_entity(chunk, &chunk->entities[i], &chunk->entities[i+1]);
+        //chunk->entities[i] = chunk->entities[i+1];
         
         /*if(chunk->entities[i].chunk_entity_index > 0) {
             chunk->entities[i].chunk_entity_index--;
         }*/
     }
+    
+    chunk->num_entities--;
 
-    for(uint32_t i = index; i < chunk->num_entities; i++) {
-        if(chunk->entities[i].chunk_entity_index > 0) {
-            chunk->entities[i].chunk_entity_index--;
-        }
+    for(uint32_t i = 0; i < chunk->num_entities; i++) {
+        chunk->entities[i].chunk_entity_index = i;
     } 
 
-    chunk->num_entities--;
 }
-
 
 
 // Move entity to correct chunk.
@@ -375,11 +425,16 @@ bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
         return false;
     }
 
-    struct chunk* correct_chunk = get_chunk(chunk->world, entity_chunk_x, entity_chunk_y);
+    struct chunk* correct_chunk = get_chunk_cr(chunk->world, entity_chunk_x, entity_chunk_y);
     if(!correct_chunk) {
         return false;
     }
-    
+
+    if(correct_chunk == chunk) {
+        errmsg("Trying to move entity into same chunk.");
+        return false;
+    }
+
     if(correct_chunk->num_entities+1 >= CHUNK_ENTITIES_MAX) {
         errmsg("Entity moved chunks, but the destination chunk is full. (( FIXME ))");
         remove_entity(chunk, entity->chunk_entity_index);
@@ -387,19 +442,27 @@ bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
     }
 
 
+    printf("Removing entity %i\n", entity->type);
     // Copy entity to correct chunk first
     // and then remove it from the old chunk.
 
-    entity->parent_chunk_x = entity_chunk_x;
-    entity->parent_chunk_y = entity_chunk_y;
 
-    uint32_t old_chunk_entity_index = entity->chunk_entity_index;
+    /*
+    uint32_t old_entity_index = entity->chunk_entity_index;
 
-    entity->chunk_entity_index = correct_chunk->num_entities;
-    correct_chunk->entities[correct_chunk->num_entities] = *entity;
+    // Copying entity to another chunk.
+    struct entity* to_entity = &correct_chunk->entities[correct_chunk->num_entities];
+    deepcopy_entity(chunk, entity, to_entity);
 
+
+    to_entity->chunk_entity_index = correct_chunk->num_entities;
+    to_entity->parent_chunk_x = entity_chunk_x;
+    to_entity->parent_chunk_y = entity_chunk_y;
     correct_chunk->num_entities++;
-    remove_entity(chunk, old_chunk_entity_index);
+    */
+
+    // Remove old entity.
+    remove_entity(chunk, entity->chunk_entity_index);
 
     return true;
 }
@@ -410,22 +473,22 @@ void render_chunk_entities(struct gstate* gst, struct chunk* chunk) {
         struct entity* entity = &chunk->entities[i];
 
         if(correct_entity_parent_chunk(entity, chunk)) {
-            if(i > 0) {
+            /*if(i > 0) {
                 i--;
-            }
+            }*/
+            break;
         }
 
+        entity->pos.x += gst->frametime * 50.0f;
 
         entity_update_movement_mods(gst, entity);
-
         update_entity_animation(gst, entity);
-        render_sprite(gst, &entity->sprite, entity->pos);
+        entity_render(gst, entity);
     }
 }
 
 void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
-    /*
     DrawRectangleLines(
                 chunk->col * CHUNK_SIZE * chunk->scale,
                 chunk->row * CHUNK_SIZE * chunk->scale,
@@ -438,7 +501,7 @@ void render_chunk(struct gstate* gst, struct chunk* chunk) {
                 chunk->row * CHUNK_SIZE * chunk->scale,
                 16,
                 (Color){ 20, 130, 20, 200 }
-            );*/
+            );
 
     render_chunk_entities(gst, chunk);
 
