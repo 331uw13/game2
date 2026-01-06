@@ -100,15 +100,6 @@ void damage_entity(struct entity* entity, int damage) {
     entity->health -= damage;
     entity->sprite.blink_timer = 0.3f;
     
-    if(entity->health <= 0) {
-        struct chunk* chunk = get_chunk_cr(entity->world,
-                entity->parent_chunk_x,
-                entity->parent_chunk_y);
-        
-        if(chunk) {
-            remove_entity(chunk, entity->chunk_entity_index);
-        }
-    }
 }
 
 void entity_render(struct gstate* gst, struct entity* entity) {
@@ -124,10 +115,6 @@ void entity_render(struct gstate* gst, struct entity* entity) {
         }
     }
 }
-
-
-static Vector2 TEST[1024] = { 0 };
-static int TEST_I = 0;
 
 int entity_world_collision_adjust(struct entity* entity, float frametime) {
     int adjusted_directions = 0;
@@ -149,6 +136,7 @@ int entity_world_collision_adjust(struct entity* entity, float frametime) {
                 Vector2Distance(entity->pos, entity->want_pos) / WORLD_RAY_STEP_SIZE,
                 NULL)) {
         entity->want_pos = entity->pos; // Invalid movement. Do not accept wanted position.
+        errmsg("Entity noclipped, but adjusted.");
         return -1;
     }
 
@@ -180,7 +168,6 @@ int entity_world_collision_adjust(struct entity* entity, float frametime) {
         adjusted_directions |= ENTITY_UP_ADJUSTED;
     }
 
-
     // Handle down movement.
     if(want_move_down && allow_move_down) {
         entity->pos.y = entity->want_pos.y;
@@ -190,14 +177,16 @@ int entity_world_collision_adjust(struct entity* entity, float frametime) {
         adjusted_directions |= ENTITY_DOWN_ADJUSTED;
     }
 
+
     // Handle left movement.
     if(want_move_left && allow_move_left) {
         entity->pos.x = entity->want_pos.x;
     }
-    else 
+     
     if(!allow_move_left) {
         entity->vel.x = -entity->vel.x * 0.7;
         entity->want_pos = entity->pos;
+
         adjusted_directions |= ENTITY_LEFT_ADJUSTED;
     }
     
@@ -205,7 +194,7 @@ int entity_world_collision_adjust(struct entity* entity, float frametime) {
     if(want_move_right && allow_move_right) {
         entity->pos.x = entity->want_pos.x;
     }
-    else
+    
     if(!allow_move_right) {
         entity->vel.x = -entity->vel.x * 0.7;
         entity->want_pos = entity->pos;
@@ -232,6 +221,8 @@ int entity_world_collision_adjust(struct entity* entity, float frametime) {
     else {
         entity->on_ground = false; // Didnt find surface.
     }
+
+
 
     entity->want_pos = entity->pos;
     return adjusted_directions;

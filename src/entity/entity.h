@@ -37,6 +37,13 @@ struct hitarea {
 
 
 struct entity {
+    struct entity* prev;  // Previous and next pointers
+    struct entity* next;  // are inside of the entity's chunk.
+    bool           enabled;    
+
+    int      parent_chunk_x;
+    int      parent_chunk_y;
+    int64_t  parent_chunk_link_index; // This is the index in 'chunk->entities[]'
 
     // Always use 'entity.want_pos' if 'entity_world_collision_adjust'
     // is used, it will avoid "noclipping". 
@@ -59,9 +66,6 @@ struct entity {
     entity_move_mod_fn_t* movement_mods [ENTITY_MOVE_MODS_MAX];
     uint32_t              num_movement_mods;
 
-    int      parent_chunk_x;
-    int      parent_chunk_y;
-    uint32_t chunk_entity_index; // Index to 'chunk->entities[]'
 
     enum entity_type type;
 

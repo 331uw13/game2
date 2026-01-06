@@ -241,6 +241,39 @@ void gstate_rungame(struct gstate* gst) {
             }
         }
 
+
+        if(IsKeyPressed(KEY_ONE)) {
+            spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_ZOMBIE);
+        }
+
+        if(IsKeyPressed(KEY_TWO)) {
+            spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_BAT);
+        }
+
+        /*
+        // For testing.
+        if(IsKeyPressed(KEY_X)) {
+            struct chunk* chunk = get_chunk(gst->player.entity.world, gst->world_mouse_pos);
+            if(chunk) {
+                
+                int tries = 0;
+                while(true) {
+                    int index = rand() % CHUNK_ENTITIES_MAX;
+                    if(chunk->entities[index]) {
+                        chunk_remove_entity(chunk, chunk->entities[index]);
+                        break;
+                    }
+
+                    if(tries >= CHUNK_ENTITIES_MAX) {
+                        errmsg("Chunk at mouse position dont have any entities...");
+                        break;
+                    }
+                    tries++;
+                }
+            }
+        } 
+        */
+
         // TODO: Clean this up. Added scopes to make 
         //       it seem littlebit more clear what is what.
 
@@ -249,15 +282,6 @@ void gstate_rungame(struct gstate* gst) {
             ClearBackground(BLACK);
             BeginMode2D(gst->player.cam);
     
-
-
-
-            if(IsKeyPressed(KEY_ONE)) {
-                spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_BAT);
-            }
-            if(IsKeyPressed(KEY_TWO)) {
-                spawn_enemy(gst->player.entity.world, gst->world_mouse_pos, ENEMY_ZOMBIE);
-            }
 
             update_player(gst, &gst->player);
 

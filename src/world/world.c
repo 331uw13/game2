@@ -16,6 +16,10 @@ void load_world(struct world* w, int chunks_width, int chunks_height) {
     w->num_chunks = chunks_height * chunks_width;
     w->chunks = calloc(w->num_chunks, sizeof *w->chunks);
 
+    w->max_entities = w->num_chunks * CHUNK_ENTITIES_MAX;
+    w->entities = calloc(w->max_entities, sizeof *w->entities);
+
+
 
     struct worldgen_config worldgencfg;
     worldgencfg.chunk_scale = 10.0f;
@@ -41,7 +45,9 @@ void load_world(struct world* w, int chunks_width, int chunks_height) {
     */
 
     printf("World size = W: %0.2f, H: %0.2f\n", worldgencfg.world_size.x, worldgencfg.world_size.y);
+    printf("World max entities: %li\n", w->max_entities);
 }
+
 
 
 void free_world(struct world* w) {
@@ -50,7 +56,7 @@ void free_world(struct world* w) {
     }
 
     //free_psystem(w->fire_psystem);
-
+    freeif(w->entities);
     freeif(w->chunks);
 }
 
@@ -232,8 +238,10 @@ bool get_surface(struct world* w, Vector2 from, Vector2 direction, Vector2* surf
 
 
 // Move 'can_move_...' rays little bit behind where they will
-// start to avoid getting it stuck in some weird cases.
-#define COLLISION_CHECK_START_OFFSET 5.0f
+// start to avoid getting it getting stuck right away in some cases.
+// NOTE: If its moved too far back behind the entity can then get stuck on some
+//       sharp corners!
+#define COLLISION_CHECK_START_OFFSET 1.0f
 
 bool can_move_up(struct world* w, Vector2 center, float radius, Vector2* hit_normal) {
     
@@ -256,7 +264,7 @@ bool can_move_right(struct world* w, Vector2 center, float radius, Vector2* hit_
     
     center.x -= COLLISION_CHECK_START_OFFSET;
     if(get_surface(w, center, NV_RIGHT, &right, hit_normal)) {
-        //DrawCircle(right.x, right.y, 3.0f, ORANGE);
+        //DrawCircle(right.x, right.y, 3.0f, (Color){  30, 200, 30, 150 });
         if(Vector2Distance(center, right) < radius) {
             can_move_right = false;
         }
@@ -270,7 +278,7 @@ bool can_move_left(struct world* w, Vector2 center, float radius, Vector2* hit_n
     
     center.x += COLLISION_CHECK_START_OFFSET;
     if(get_surface(w, center, NV_LEFT, &left, hit_normal)) {
-        //DrawCircle(left.x, left.y, 3.0f, ORANGE);
+        //DrawCircle(left.x, left.y, 3.0f, (Color){  200, 30, 30, 150 });
         if(Vector2Distance(center, left) < radius) {
             can_move_left = false;
         }
@@ -378,33 +386,110 @@ void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
 */
 
 static
-void init_world_entity(struct entity* entity, struct chunk* chunk, Vector2 pos) {
+struct entity* spawn_entity(struct world* w, Vector2 pos, enum entity_type type) {
+    struct chunk* chunk = get_chunk(w, pos);
+    if(!chunk) {
+        errmsg("Entity %i tried to spawn outside of world: %f, %f", type, pos.x, pos.y);
+        return NULL;
+    }
     
-    *entity = null_entity();
+    struct entity* entity = NULL;
+    for(size_t i = 0; i < w->max_entities; i++) {
+        struct entity* entity_ptr = &w->entities[i];
+        if(entity_ptr->enabled) {
+            continue;
+        }
+
+        if(!chunk_add_entity(chunk, entity_ptr)) {
+            return NULL;
+        }
+
+        entity = entity_ptr;
+        break;
+    }
+
+
+    // Initialize the entity.
+
     entity->pos = pos;
-    entity->world = chunk->world;
-    
-    entity->parent_chunk_x = chunk->col;
-    entity->parent_chunk_y = chunk->row;
-    entity->spawn_event = true;
+    entity->want_pos = pos;
+    entity->vel = (Vector2){ 0, 0 };
+    entity->on_ground = false;
 
-    printf("%s: chunk: %i, %i\n",__func__, entity->parent_chunk_x, entity->parent_chunk_y);
-    /*
+    entity->world = w;
     entity->sprite = null_sprite();
-    entity->world = chunk->world;
 
-    entity->parent_chunk_x = chunk->col;
-    entity->parent_chunk_y = chunk->row;
+    entity->health = 100;
+    entity->max_health = entity->health;
 
-    entity->max_health = 100;
-    entity->health = entity->max_health;
-
+    entity->num_hitareas = 0;
     entity->num_movement_mods = 0;
+
+    entity->type = type;
     entity->spawn_event = true;
-    */
+
+    return entity;
+}
+
+void remove_entity(struct world* w, struct entity* entity) {
+    struct chunk* chunk = get_chunk_cr(w, entity->parent_chunk_x, entity->parent_chunk_y);
+    if(!chunk) {
+        errmsg("Trying to remove entity (type: %i), but its parent chunk is invalid.", entity->type);
+        return;
+    }
+
+    chunk_remove_entity(chunk, entity);
+}
+
+void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) { 
+
+    struct entity* entity = spawn_entity(w, pos, ENTITY_ENEMY);
+    if(!entity) {
+        return;
+    }
+
+    entity->enemy.type = type;
+    switch(type) {
+
+        case ENEMY_BAT:
+            entity->enemy.type = ENEMY_BAT;
+            entity->enemy.can_see_player = false;
+            entity_add_movement_mod(entity, ENTMOVMOD_enemy_flying);
+            entity_add_movement_mod(entity, ENTMOVMOD_enemy_vision);
+            entity->sprite.color_tint = (Color){ 30, 50, 70, 255 };
+            entity_add_hitarea(entity,
+                    (struct hitarea) {
+                        .impact_damage_mult = 1.0f,
+                        .offset = (Vector2){ 0, 0 },
+                        .radius = 10.0f
+                    });
+            entity->enemy.move_speed = 1.0f; // TODO: This is not used anywhere for bat.
+            break;
+
+        case ENEMY_ZOMBIE:
+            entity->enemy.type = ENEMY_ZOMBIE;
+            entity->enemy.can_see_player = false;
+            entity_add_movement_mod(entity, ENTMOVMOD_enemy_walking);
+            entity_add_movement_mod(entity, ENTMOVMOD_enemy_vision);
+            entity->sprite.color_tint = (Color){ 100, 120, 120, 255 };
+            entity->sprite.render_offset.y = -6.0f;
+            entity_add_hitarea(entity,
+                    (struct hitarea) {
+                        .impact_damage_mult = 1.0f,
+                        .offset = (Vector2){ 0, 0 },
+                        .radius = 10.0f
+                    });
+            entity->enemy.move_speed = (drand48()+1.0f) * 3.0f;
+            break;
+
+        default:
+            errmsg("Entity was spawned, but enemy type %i was not handled further.", type);
+            break;
+    }
 }
 
 
+/*
 static
 struct entity* spawn_entity(struct world* w, Vector2 pos, enum entity_type type) {
     struct chunk* chunk = get_chunk(w, pos);
@@ -475,4 +560,4 @@ void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
             break;
     }
 }
-
+*/

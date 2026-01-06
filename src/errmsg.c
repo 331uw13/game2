@@ -17,21 +17,21 @@ void errmsg_ex
 
     char buffer[ERRMSGBUF_MAX_SIZE+1] = { 0 };
     
-    size_t size = snprintf(buffer, ERRMSGBUF_MAX_SIZE,
+    size_t size = snprintf(buffer, ERRMSGBUF_MAX_SIZE-1,
             "(ERROR) [%s:%i] %s(): ",
             caller_file,
             caller_file_ln,
             caller_func);
 
-    size += vsnprintf(buffer + size, ERRMSGBUF_MAX_SIZE,
+    size += vsnprintf(buffer + size, ERRMSGBUF_MAX_SIZE-1,
             message,
             args);
 
 
 
-
     write(STDOUT_FILENO, buffer, size);
     write(STDOUT_FILENO, "\n", 1);
-    
+
+
     va_end(args);
 }

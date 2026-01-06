@@ -115,12 +115,13 @@ void load_chunk(struct worldgen_config* worldgencfg, struct world* world, struct
     chunk->row = row;
     chunk->col = col;
     chunk->num_items = 0;
-    chunk->num_entities = 0;
+    chunk->world = world;
     chunk->cells = calloc(CHUNK_SIZE * CHUNK_SIZE,
         sizeof *chunk->cells);
 
-    chunk->world = world;
 
+    chunk->entities_link_head = NULL;
+    chunk->entities_link_tail = NULL;
 
     const float isolevel = 0.1f;
     chunk->scale = worldgencfg->chunk_scale;
@@ -295,124 +296,7 @@ void render_cell_grass(struct gstate* gst, struct chunk_cell* cell) {
         interp += interp_increment;
     }
 }
-
 /*
-static
-void update_world_entity(struct chunk* chunk, struct entity* entity) {
-    int entity_chunk_x = entity->pos.x / (CHUNK_SIZE * chunk->scale);
-    int entity_chunk_y = entity->pos.y / (CHUNK_SIZE * chunk->scale);
-
-    if(entity_chunk_x == entity->parent_chunk_x
-    && entity_chunk_y == entity->parent_chunk_y) {
-        return;
-    }
-
-
-
-}
-
-static
-void update_chunk_enemies(struct gstate* gst, struct chunk* chunk) {
-    for(uint32_t i = 0; i < chunk->num_enemies; i++) {
-        struct enemy* enemy = &chunk->enemies[i];
-
-        //update_world_entity(chunk, &enemy->entity);
- 
-        update_enemy_animation(gst, enemy);
-
-      
-        enemy_update_movement_mods(gst, enemy);
-
-        //update_sprite_animation(&enemy->entity.sprite, gst->frametime);
-        //render_sprite(&enemy->entity.sprite, enemy->entity.pos);
-    }
-}
-*/
-
-static
-void deepcopy_entity(struct chunk* chunk, struct entity* from, struct entity* to) {
-
-    memmove(to, from, sizeof *from);
-
-    memmove(to->hitareas, from->hitareas, sizeof(from->hitareas));
-    memmove(to->movement_mods, from->movement_mods, sizeof(from->movement_mods));
-
-
-    if(to->type == ENTITY_ENEMY) {
-        memmove(&to->enemy, &from->enemy, sizeof(struct enemy));
-    }
-
-
-    // TODO: 
-    /*
-
-
-       - Create big array of all entities in the world
-
-       - Create linked list for chunks (pointers to world enemies)
-         enemies dont need to be copied.
-
-
-       */
-
-    /*
-    to->want_pos = from->want_pos;
-    to->pos = from->pos;
-    to->vel = from->vel;
-    to->on_ground = from->on_ground;
-    to->world = from->world;
-    to->sprite = from->sprite;
-    to->health = from->health;
-    to->max_health = from->max_health;
-
-    memmove(to->hitareas, from->hitareas, sizeof(from->hitareas));
-    to->num_hitareas = from->num_hitareas;
-    
-    memmove(to->movement_mods, from->movement_mods, sizeof(from->movement_mods));
-    to->num_movement_mods = from->num_movement_mods;
-
-    to->type = from->type;
-    to->spawn_event = from->spawn_event;
-
-    if(to->type == ENTITY_ENEMY) {
-        to->enemy.type = from->enemy.type;
-    }
-    */
-}
-
-void remove_entity(struct chunk* chunk, uint32_t index) {
-    if(chunk->num_entities == 0) {
-        return;
-    }
-    
-    if(index >= chunk->num_entities) {
-        return;
-    }
-
-    if(index+1 >= chunk->num_entities) {
-        chunk->num_entities--;
-        return;
-    }
-
-
-    for(uint32_t i = index; i < chunk->num_entities-1; i++) {
-        deepcopy_entity(chunk, &chunk->entities[i], &chunk->entities[i+1]);
-        //chunk->entities[i] = chunk->entities[i+1];
-        
-        /*if(chunk->entities[i].chunk_entity_index > 0) {
-            chunk->entities[i].chunk_entity_index--;
-        }*/
-    }
-    
-    chunk->num_entities--;
-
-    for(uint32_t i = 0; i < chunk->num_entities; i++) {
-        chunk->entities[i].chunk_entity_index = i;
-    } 
-
-}
-
-
 // Move entity to correct chunk.
 static
 bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
@@ -442,50 +326,205 @@ bool correct_entity_parent_chunk(struct entity* entity, struct chunk* chunk) {
     }
 
 
-    printf("Removing entity %i\n", entity->type);
-    // Copy entity to correct chunk first
-    // and then remove it from the old chunk.
+    //printf("Removing entity %i\n", entity->type);
+
+    return true;
+}*/
 
 
-    /*
-    uint32_t old_entity_index = entity->chunk_entity_index;
+static
+bool correct_entity_parent_chunk(struct chunk* chunk, struct entity* entity) {
 
-    // Copying entity to another chunk.
-    struct entity* to_entity = &correct_chunk->entities[correct_chunk->num_entities];
-    deepcopy_entity(chunk, entity, to_entity);
+    int real_parent_chunk_x;
+    int real_parent_chunk_y;
 
+    get_chunk_coords(entity->pos, chunk->scale,
+            &real_parent_chunk_x,
+            &real_parent_chunk_y);
 
-    to_entity->chunk_entity_index = correct_chunk->num_entities;
-    to_entity->parent_chunk_x = entity_chunk_x;
-    to_entity->parent_chunk_y = entity_chunk_y;
-    correct_chunk->num_entities++;
-    */
+    if(real_parent_chunk_x == chunk->col
+    && real_parent_chunk_y == chunk->row) {
+        return false;
+    }
 
-    // Remove old entity.
-    remove_entity(chunk, entity->chunk_entity_index);
+    struct chunk* correct_chunk = get_chunk(entity->world, entity->pos);
+    if(!correct_chunk) {
+        errmsg("Entity type %i moved into invalid chunk (%f, %f)",
+                entity->type,
+                entity->pos.x,
+                entity->pos.y);
+        chunk_remove_entity(chunk, entity);
+        return true;
+    }
+
+    chunk_remove_entity(chunk, entity);
+    chunk_add_entity(correct_chunk, entity);
 
     return true;
 }
 
 static
 void render_chunk_entities(struct gstate* gst, struct chunk* chunk) {
-    for(int i = 0; i < (int)chunk->num_entities; i++) {
-        struct entity* entity = &chunk->entities[i];
+ 
+    struct entity* entity = chunk->entities_link_head;
+    while(entity) {
+        struct entity* next_entity = entity->next;
 
-        if(correct_entity_parent_chunk(entity, chunk)) {
-            /*if(i > 0) {
-                i--;
-            }*/
-            break;
+        if(correct_entity_parent_chunk(chunk, entity)) {
+            entity = next_entity;
+            continue;
         }
 
-        entity->pos.x += gst->frametime * 50.0f;
 
         entity_update_movement_mods(gst, entity);
         update_entity_animation(gst, entity);
         entity_render(gst, entity);
+
+        entity = next_entity;
     }
 }
+
+
+static
+bool chunk_find_free_entity(struct chunk* chunk, int64_t* index) {
+    for(int64_t i = 0; i < CHUNK_ENTITIES_MAX; i++) {
+        if(!chunk->entities[i]) {
+            *index = i;
+            return true;
+        }
+    }
+    return false;
+}
+/*
+static
+void print_entity_nodes(struct chunk* chunk) {
+    
+    printf("===== Print Entity nodes, time:%f\n", GetTime());
+    for(uint32_t i = 0; i < CHUNK_ENTITIES_MAX; i++) {
+        struct entity* entity = chunk->entities[i];
+
+        if(!entity) {
+            printf("\033[90m[%i] Entity: NULL\033[0m\n", i);
+            continue;
+        }
+
+        printf("[%i] Entity (\033[34m%p\033[0m), Enabled = %s, Link index: %li\n", 
+                i, entity, entity->enabled ? "True" : "False", entity->parent_chunk_link_index);
+        printf("   `-> Prev = \033[2;35m%p\033[0m\n", entity->prev);
+        printf("   `-> Next = \033[2;35m%p\033[0m\n", entity->next);
+    }
+
+    printf("\033[90m ''''''''''''''''''''''''' \033[0m\n");
+    printf("    Head = %p\n", chunk->entities_link_head);
+    printf("    Tail = %p\n", chunk->entities_link_tail);
+    printf("\033[90m ''''''''''''''''''''''''' \033[0m\n");
+
+    printf("--------------------------------------------------------\n");
+}
+ */
+
+bool chunk_remove_entity(struct chunk* chunk, struct entity* entity) {
+
+    if(entity->parent_chunk_x != chunk->col
+    || entity->parent_chunk_y != chunk->row) {
+        errmsg("Trying to remove entity from chunk which it doesnt belong to.");
+        return false;
+    }
+
+
+    // When removing entity
+    // we want to actually update the 'entity->next->prev' pointer.
+    // and also 'entity->prev->next'
+    // So that this 'entity' will be unlinked.
+
+    if(entity->prev) {
+        entity->prev->next = entity->next;
+        if(!entity->prev->next) {
+            chunk->entities_link_tail = entity->prev;
+        }
+    }
+    if(entity->next) {
+        entity->next->prev = entity->prev;
+        if(!entity->next->prev) {
+            chunk->entities_link_head = entity->next;
+        }
+    }
+  
+
+    //printf("\033[31mRemoved entity \033[1m%p / %li\033[0m\n", entity, entity->parent_chunk_link_index);
+  
+    entity->enabled = false;
+    chunk->entities[entity->parent_chunk_link_index] = NULL;
+
+    if(chunk->num_entities > 0) {
+        chunk->num_entities--;
+    }
+
+    if(chunk->num_entities == 0) {
+        chunk->entities_link_head = NULL;
+        chunk->entities_link_tail = NULL;
+    }
+
+    //print_entity_nodes(chunk);
+    return true;
+}
+
+static
+void entity_link_add_node(struct chunk* chunk, struct entity* entity, int64_t index) {
+
+    for(int64_t i = index+1; i < CHUNK_ENTITIES_MAX; i++) {
+        struct entity* next_ent = chunk->entities[i];
+        if(next_ent) {
+            
+            entity->next = next_ent;
+            entity->next->prev = entity;
+            break;
+        }
+    }
+
+    for(int64_t i = index-1; i >= 0; i--) {
+        struct entity* prev_ent = chunk->entities[i];
+        if(prev_ent) {
+            
+            entity->prev = prev_ent;
+            entity->prev->next = entity;
+            break;
+        }
+    }
+}
+
+bool chunk_add_entity(struct chunk* chunk, struct entity* entity) {
+    int64_t index = 0;
+    if(!chunk_find_free_entity(chunk, &index)) {
+        errmsg("Cant add entity to chunk because its full. TODO: Resize 'chunk->entities[]'...");
+        return false;
+    }
+
+    chunk->entities[index] = entity;
+    entity->enabled = true;
+    entity->prev = NULL;
+    entity->next = NULL;
+
+    entity_link_add_node(chunk, entity, index);
+
+    if(entity->prev == NULL) {
+        chunk->entities_link_head = entity;
+    }
+    if(entity->next == NULL) {
+        chunk->entities_link_tail = entity;
+    }
+
+    entity->parent_chunk_x = chunk->col;
+    entity->parent_chunk_y = chunk->row;
+    entity->parent_chunk_link_index = index;
+
+    //printf("\033[32m--> Added entity to index \033[1m%i\033[0m\n", index);
+    //print_entity_nodes(chunk);
+
+    chunk->num_entities++;
+    return true;
+}
+
 
 void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
@@ -494,14 +533,16 @@ void render_chunk(struct gstate* gst, struct chunk* chunk) {
                 chunk->row * CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
-                BLUE);
+                (Color){ 30, 120, 120, 30 });
 
+    /*
     DrawText(TextFormat("Entities: %i", chunk->num_entities),
                 chunk->col * CHUNK_SIZE * chunk->scale,
                 chunk->row * CHUNK_SIZE * chunk->scale,
                 16,
                 (Color){ 20, 130, 20, 200 }
             );
+    */
 
     render_chunk_entities(gst, chunk);
 
@@ -576,5 +617,7 @@ struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p) {
     get_chunk_local_coords(p, chunk, &local_x, &local_y);
     return &chunk->cells[ local_y * CHUNK_SIZE + local_x ];
 }
+
+
 
 

@@ -20,7 +20,8 @@
 #define INF_DISTANCE -9999999999.9f
 
 
-#define CHUNK_ITEMS_MAX 64    // TODO: Items should never get discarded if they cant spawn because of this limit!
+// TODO: Items or entities should never get discarded if they cant spawn because of these limits!
+#define CHUNK_ITEMS_MAX 64   
 #define CHUNK_ENTITIES_MAX 128
 
 struct gstate;
@@ -51,7 +52,7 @@ struct chunk_cell {
     int world_x;
     int world_y;
     enum chunk_cell_id    id;
-    struct segment      segment;
+    struct segment        segment;
     
     enum chunk_cell_type  type;
 };
@@ -61,11 +62,13 @@ struct chunk {
     struct chunk_cell* cells;
     uint32_t           num_cells;
 
-    struct item  items [CHUNK_ITEMS_MAX];
-    uint32_t     num_items;
+    struct item items [CHUNK_ITEMS_MAX];
+    uint32_t    num_items;
 
-    struct entity entities [CHUNK_ENTITIES_MAX];
-    uint32_t      num_entities;
+    struct entity* entities_link_head;
+    struct entity* entities_link_tail;
+    struct entity* entities [CHUNK_ENTITIES_MAX];
+    uint64_t       num_entities;
 
 
     int col; // TODO: Rename.
@@ -91,10 +94,8 @@ struct chunk_cell* get_chunk_cell_at(struct chunk* chunk, Vector2 p);
 void get_chunk_local_coords(Vector2 p, struct chunk* chunk, int* col, int* row);
 void get_chunk_coords(Vector2 p, float chunk_scale, int* col, int* row);
 
-
-void remove_entity(struct chunk* chunk, uint32_t index);
-
-//enum cell_slope get_cell_slope(struct chunk_cell* cell);
+bool chunk_remove_entity(struct chunk* chunk, struct entity* entity);
+bool chunk_add_entity(struct chunk* chunk, struct entity* entity);
 
 
 #endif

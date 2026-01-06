@@ -25,6 +25,12 @@ struct world {
 
     struct psystem*    fire_psystem;
     struct ps_emitter* fire_emitter;
+
+    // Chunks will then have linked list of pointers to these entities.
+    // they dont need to be copied ever.
+    struct entity*     entities;
+    size_t             max_entities;
+
 };
 
 
@@ -53,5 +59,6 @@ bool can_move_right(struct world* w, Vector2 center, float radius, Vector2* hit_
 void spawn_item(struct world* w, Vector2 pos, enum item_type type);
 void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type);
 
+void remove_entity(struct world* w, struct entity* entity);
 
 #endif
