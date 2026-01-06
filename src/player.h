@@ -14,6 +14,10 @@
 
 struct player {
     Camera2D cam;
+    Vector2  cam_offset;
+    Vector2  from_cam_offset;
+    Vector2  to_cam_offset;
+    float    cam_offset_lerp_timer;
 
     struct entity entity;
 

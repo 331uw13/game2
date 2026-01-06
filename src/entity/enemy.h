@@ -20,10 +20,10 @@ struct enemy {
 
     // Controlled by entity vision modifier './src/entity_mods/vision.c'
     bool can_see_player;
-     
-    enum direction walk_direction;
-    float move_speed;
-   
+
+    enum direction move_direction;
+    float          move_direction_change_timer;
+
     union {
         struct {
         }

@@ -528,13 +528,14 @@ bool chunk_add_entity(struct chunk* chunk, struct entity* entity) {
 
 void render_chunk(struct gstate* gst, struct chunk* chunk) {
 
+    /*
     DrawRectangleLines(
                 chunk->col * CHUNK_SIZE * chunk->scale,
                 chunk->row * CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 CHUNK_SIZE * chunk->scale,
                 (Color){ 30, 120, 120, 30 });
-
+    */
     /*
     DrawText(TextFormat("Entities: %i", chunk->num_entities),
                 chunk->col * CHUNK_SIZE * chunk->scale,

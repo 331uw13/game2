@@ -11,6 +11,10 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     
     pl->cam = (Camera2D) { 0 };
     pl->cam.target = (Vector2){ spawn_pos.x, spawn_pos.y };
+    pl->cam_offset = (Vector2){ 0, 0 };
+    pl->from_cam_offset = pl->cam_offset;
+    pl->to_cam_offset = pl->cam_offset;
+    pl->cam_offset_lerp_timer = 0.0f;
 
     pl->cam.rotation = 0.0f;
     pl->cam.zoom = 1.0f;
@@ -20,6 +24,7 @@ void create_player(struct gstate* gst, struct world* world, struct player* pl, V
     pl->attack_timer = 0.0f;
     pl->attack_delay = 0.02f;
     pl->spell_force = 0.0f;
+    pl->cam_offset = (Vector2){ 0, 0 };
     pl->using_inventory = false;
     pl->pickedup_item = NULL;
 
@@ -403,14 +408,33 @@ void update_inventory_control(struct gstate* gst, struct player* pl) {
             *storage_slot = ITEM_NONE;
         }
     }
-
-
 }
+
+
+static
+void add_player_camoffset(struct player* pl, float frametime) {    
+    
+    if(pl->cam_offset_lerp_timer >= 1.0f) {
+        pl->cam_offset_lerp_timer = 0.0f;
+
+        Vector2 new_offset = Vector2Scale(pl->entity.vel, 0.02f);
+        pl->from_cam_offset = pl->cam_offset;
+        pl->to_cam_offset = new_offset;
+    }
+
+
+    pl->cam_offset = Vector2Lerp(pl->from_cam_offset, pl->to_cam_offset, pl->cam_offset_lerp_timer);
+    pl->cam_offset_lerp_timer += frametime * 3.0;
+}
+
 
 void update_player(struct gstate* gst, struct player* pl) {
     pl->attack_button_pressed = IsMouseButtonPressed(MOUSE_LEFT_BUTTON);
     pl->attack_button_down    = IsMouseButtonDown(MOUSE_LEFT_BUTTON);
 
+    add_player_camoffset(pl, gst->frametime);
+
+    //pl->cam_offset = Vector2Scale(pl->entity.vel, 0.05f);
     
     update_inventory_control(gst, pl);
     get_movement_input(pl, gst->frametime);

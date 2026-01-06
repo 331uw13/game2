@@ -111,7 +111,7 @@ struct chunk_cell* get_world_chunk_cell_v(struct world* w, Vector2 p) {
 }
 
 struct chunk_cell* raycast_world
-    (struct world* w, Vector2 start, Vector2 direction, int max_len, Vector2* ray_pos) {
+    (struct world* w, Vector2 start, Vector2 direction, int max_len, Vector2* ray_pos) { 
     if(w == NULL) {
         errmsg("world == NULL");
         return NULL;
@@ -195,6 +195,90 @@ struct chunk_cell* raycast_world
     
     return NULL;
 }
+
+
+struct chunk_cell* raycast_world_grid
+    (struct world* w, Vector2 start, Vector2 direction, int max_len, Vector2* ray_pos) { 
+    if(w == NULL) {
+        errmsg("world == NULL");
+        return NULL;
+    }
+
+    Vector2 end = Vector2Add(start, Vector2Scale(direction, max_len));
+
+    int start_x = (int)floor(start.x);
+    int start_y = (int)floor(start.y);
+    int end_x = (int)floor(end.x);
+    int end_y = (int)floor(end.y);
+
+    int width = end_x - start_x;
+    int height = end_y - start_y;
+
+    int dx0 = 0;
+    int dx1 = 0;
+    int dy0 = 0;
+    int dy1 = 0;
+    dx1 = dx0 = (width < 0) ? -1 : 1;
+    dy0 = (height < 0) ? -1 : 1;
+
+    int aw = abs(width);
+    int ah = abs(height);
+    int longest = aw;
+    int shortest = ah;
+
+    if(longest < shortest) {
+        longest = ah;
+        shortest = aw;
+        dy1 = (height < 0) ? -1 : 1; 
+        dx1 = 0;
+    }
+
+    int numerator = longest >> 1;
+
+    int ray_x = start_x;
+    int ray_y = start_y;
+
+    for(int i = 0; i < longest; i++) {
+        
+        struct chunk_cell* cell = get_world_chunk_cell(w, ray_x, ray_y);
+    
+        if(ray_pos) {
+            ray_pos->x = ray_x;
+            ray_pos->y = ray_y;
+        }
+   
+        if(cell && (cell->id == S_ID_SURFACE || cell->id == S_ID_FULL)) {
+            float d = Vector2DotProduct(cell->segment.normal, direction);
+            if(d < 0.0) {
+                return cell;
+            }
+        }
+      
+       
+        
+        // Visualize ray.
+        DrawRectangle(
+                ray_x * w->chunks[0].scale + 1,
+                ray_y * w->chunks[0].scale + 1,
+                w->chunks[0].scale - 2,
+                w->chunks[0].scale - 2,
+                (Color){ 20, 100, 20, 100 });
+
+        numerator += shortest;
+        if(numerator > longest) {
+            numerator -= longest;    
+            ray_x += dx0;
+            ray_y += dy0;
+        }
+        else {
+            ray_x += dx1;
+            ray_y += dy1;
+        }
+    }
+    
+    return NULL;
+}
+
 
 
 static
@@ -463,7 +547,6 @@ void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
                         .offset = (Vector2){ 0, 0 },
                         .radius = 10.0f
                     });
-            entity->enemy.move_speed = 1.0f; // TODO: This is not used anywhere for bat.
             break;
 
         case ENEMY_ZOMBIE:
@@ -479,7 +562,6 @@ void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
                         .offset = (Vector2){ 0, 0 },
                         .radius = 10.0f
                     });
-            entity->enemy.move_speed = (drand48()+1.0f) * 3.0f;
             break;
 
         default:
@@ -488,76 +570,3 @@ void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) {
     }
 }
 
-
-/*
-static
-struct entity* spawn_entity(struct world* w, Vector2 pos, enum entity_type type) {
-    struct chunk* chunk = get_chunk(w, pos);
-    if(!chunk) {
-        errmsg("Entity %i tried to spawn outside of world: %f, %f", type, pos.x, pos.y);
-        return NULL;
-    }
-
-
-    if(chunk->num_entities+1 >= CHUNK_ENTITIES_MAX) {
-        errmsg("Cant spawn entity %i to chunk. Its too full.", type);
-        return NULL;
-    }
-
-    struct entity* entity = &chunk->entities[chunk->num_entities];
-    entity->chunk_entity_index = chunk->num_entities;
-    chunk->num_entities++;
-
-    init_world_entity(entity, chunk, pos);
-    return entity;
-}
-
-
-void spawn_enemy(struct world* w, Vector2 pos, enum enemy_type type) { 
-
-    struct entity* entity = spawn_entity(w, pos, ENTITY_ENEMY);
-    if(!entity) {
-        return;
-    }
-
-    entity->type = ENTITY_ENEMY;
-    entity->enemy.type = type;
-    switch(type) {
-
-        case ENEMY_BAT:
-            entity->enemy.type = ENEMY_BAT;
-            entity->enemy.can_see_player = false;
-            //entity_add_movement_mod(entity, ENTMOVMOD_enemy_flying);
-            //entity_add_movement_mod(entity, ENTMOVMOD_enemy_vision);
-            entity->sprite.color_tint = (Color){ 30, 50, 70, 255 };
-            entity_add_hitarea(entity,
-                    (struct hitarea) {
-                        .impact_damage_mult = 1.0f,
-                        .offset = (Vector2){ 0, 0 },
-                        .radius = 10.0f
-                    });
-            entity->enemy.move_speed = 1.0f; // TODO: This is not used anywhere for bat.
-            break;
-
-        case ENEMY_ZOMBIE:
-            entity->enemy.type = ENEMY_ZOMBIE;
-            entity->enemy.can_see_player = false;
-            //entity_add_movement_mod(entity, ENTMOVMOD_enemy_walking);
-            //entity_add_movement_mod(entity, ENTMOVMOD_enemy_vision);
-            entity->sprite.color_tint = (Color){ 100, 120, 120, 255 };
-            entity->sprite.render_offset.y = -6.0f;
-            entity_add_hitarea(entity,
-                    (struct hitarea) {
-                        .impact_damage_mult = 1.0f,
-                        .offset = (Vector2){ 0, 0 },
-                        .radius = 10.0f
-                    });
-            entity->enemy.move_speed = (drand48()+1.0f) * 3.0f;
-            break;
-
-        default:
-            errmsg("Entity was spawned, but enemy type %i was not handled further.", type);
-            break;
-    }
-}
-*/

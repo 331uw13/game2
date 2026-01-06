@@ -293,8 +293,8 @@ void gstate_rungame(struct gstate* gst) {
             */
             gst->player.cam.offset.x = gst->screen_width / 2;
             gst->player.cam.offset.y = gst->screen_height / 2;
-            gst->player.cam.target.x = gst->player.entity.pos.x;
-            gst->player.cam.target.y = gst->player.entity.pos.y;
+            gst->player.cam.target.x = gst->player.entity.pos.x + gst->player.cam_offset.x;
+            gst->player.cam.target.y = gst->player.entity.pos.y + gst->player.cam_offset.y;
 
 
        
@@ -360,6 +360,7 @@ void gstate_rungame(struct gstate* gst) {
         EndShaderMode();
     
 
+        DrawFPS(5, GetScreenHeight()-25);
         /*
         DrawFPS(5, GetScreenHeight()-25);
         DrawText(TextFormat("X: %i, Y: %i onground: %s | jumps: %i | moving: %s",
